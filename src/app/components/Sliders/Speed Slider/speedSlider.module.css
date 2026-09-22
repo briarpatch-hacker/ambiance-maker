@@ -6,6 +6,8 @@
 }
 
 .speed_slider svg {
-  height: 4.8rem;
+  height: auto;
+  width: 3.6rem;
+  transform: scale(0.75);
   fill: var(--grey-text);
 }

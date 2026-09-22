@@ -20,7 +20,6 @@ export default function LoginCard({ path = "/" }: LoginCardProps) {
           width={1080}
           height={360}
           alt="Ambiance Maker Banner"
-          priority
         />
       </div>
       <p className={styles.subtitle}>

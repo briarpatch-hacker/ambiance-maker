@@ -82,6 +82,9 @@ export default function AmbiancePlayer({
   const prevStartTimesRef = useRef<(number | undefined)[]>([]);
   // Tracks previous video link / src so we can destroy and recreate the video when user changes it
   const prevLinksRef = useRef<(string | undefined)[]>([]);
+  // Tracks the videoId so we can detect when a new video enters the player
+  // This avoids an edge case when old / new video have the same title
+  const prevCuedVideoIdsRef = useRef<(string | undefined)[]>([]);
 
   // Player controls
   const [muted, setMuted] = useState(false);
@@ -282,6 +285,8 @@ export default function AmbiancePlayer({
                     }
                     prevStartTimesRef.current[index] =
                       initialVideoData?.[index]?.startTime ?? 0;
+                    prevCuedVideoIdsRef.current[index] =
+                      player.getVideoData().video_id;
                     setVideoData &&
                       updateObjectArr(setVideoData, index, {
                         title: player.getVideoData().title,
@@ -367,11 +372,13 @@ export default function AmbiancePlayer({
                       }
                       // Video cued - should happen when user replaces src link with another
                       case 5: {
+                        const cuedVideoId = player.getVideoData().video_id;
                         const currentTitle = player.getVideoData().title;
                         if (
-                          currentTitle &&
-                          currentTitle !== videoDataRef.current[index].title
+                          cuedVideoId &&
+                          cuedVideoId !== prevCuedVideoIdsRef.current[index]
                         ) {
+                          prevCuedVideoIdsRef.current[index] = cuedVideoId;
                           prevStartTimesRef.current[index] = 0;
                           // We need to set up all the data / timers again here
                           setVideoData &&
@@ -658,6 +665,8 @@ export default function AmbiancePlayer({
     };
   }, [fullscreenHandle.active]);
 
+  const hasLoadedVideo = videoData.some((v) => v.title);
+
   const jumpForward = useCallback(() => {
     playerRefs.current.forEach((player, index) => {
       if (!player) return;
@@ -793,7 +802,12 @@ export default function AmbiancePlayer({
                 <button
                   className={styles.desktop_button}
                   onClick={fullscreenHandle.enter}
-                  title="Full screen"
+                  disabled={!hasLoadedVideo}
+                  title={
+                    hasLoadedVideo
+                      ? "Full screen"
+                      : "Add a video to enter fullscreen"
+                  }
                   aria-label="Full screen"
                 >
                   <FullscreenOpen style={{ padding: "0.2rem 0" }} />

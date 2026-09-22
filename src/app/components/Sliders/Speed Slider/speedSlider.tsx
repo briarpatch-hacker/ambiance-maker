@@ -24,14 +24,10 @@ export default function SpeedSlider({
 }: SpeedSliderProps) {
   return (
     <div style={{ ...style }} className={styles.speed_slider}>
-      <Speedometer
-        style={{
-          marginRight: "0.54rem",
-          width: "4.2rem",
-          height: "4.8rem",
-          transform: "scale(1.25) translateX(0.0rem) translateY(0.03rem)",
-        }}
-      />
+      <div className={styles.speedometer_wrapper}>
+        <Speedometer
+        />
+      </div>
       <DiscreteSlider
         values={values}
         defaultValue="1.00x"
