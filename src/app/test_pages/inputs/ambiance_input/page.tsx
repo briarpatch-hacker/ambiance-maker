@@ -14,6 +14,8 @@ export default function Page() {
 
   function onSpeedChange(speed: string) {}
 
+  function onDelayChange(delay: number) {}
+
   return (
     <div className={styles.page}>
       <div className={styles.wrapper}>
@@ -25,6 +27,7 @@ export default function Page() {
           onTimeframeChange={onTimeframeChange}
           onVolumeChange={onVolumeChange}
           onSpeedChange={onSpeedChange}
+          onDelayChange={onDelayChange}
         />
         <AmbianceInput
           videoTitle="Calm waves"
@@ -34,6 +37,7 @@ export default function Page() {
           onTimeframeChange={onTimeframeChange}
           onVolumeChange={onVolumeChange}
           onSpeedChange={onSpeedChange}
+          onDelayChange={onDelayChange}
         />
       </div>
     </div>

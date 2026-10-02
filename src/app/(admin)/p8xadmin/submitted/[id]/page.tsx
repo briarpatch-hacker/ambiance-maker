@@ -43,6 +43,7 @@ async function getSubmission(ambianceId: string): Promise<SubmissionData | null>
     endTime: v.endTime,
     volume: v.volume,
     playbackSpeed: v.playbackSpeed,
+    loopDelay: v.loopDelay,
   }));
 
   return {

@@ -39,6 +39,7 @@ export interface VideoData {
   currentTime?: number;
   volume?: number;
   playbackSpeed?: number;
+  loopDelay?: number;
   ready?: boolean;
   isPlaying?: boolean;
   seekTo?: number;
@@ -91,6 +92,11 @@ export default function AmbiancePlayer({
 
   // Timeouts for controlling looping videos
   const timeoutRefs = useRef<(NodeJS.Timeout | null)[]>([]);
+  // Timeouts for the loop delays
+  const delayTimeoutRefs = useRef<(NodeJS.Timeout | null)[]>([]);
+  // Indiciates if vid is in a delay phase after a full loop
+  // Used to clear the loop delayer timer when appropriate
+  const inDelayPauseRef = useRef<boolean[]>([]);
   // Single collection of intervals used to keep the iframe state in sync
   const videoIntervalRefs = useRef<(NodeJS.Timeout | null)[]>([]);
   const lastVolumeRef = useRef<(number | undefined)[]>([]);
@@ -111,13 +117,18 @@ export default function AmbiancePlayer({
   // Calls updateVideos when the videoData changes
   useEffect(() => {
     updateVideos();
-    // Cleans up timeouts on dismount
+  }, [videoData]);
+
+  useEffect(() => {
     return () => {
       timeoutRefs.current.forEach((timeout) => {
         if (timeout) clearTimeout(timeout);
       });
+      delayTimeoutRefs.current.forEach((timeout) => {
+        if (timeout) clearTimeout(timeout);
+      });
     };
-  }, [videoData]);
+  }, []);
 
   // Creates the videos for the ambiance player
   const updateVideos = () => {
@@ -185,6 +196,7 @@ export default function AmbiancePlayer({
 
           // Handle seekTo: seek to the requested position then immediately clear the instruction
           if (video.seekTo !== undefined) {
+            clearDelayTimeout(index);
             player.seekTo(video.seekTo);
             player.playVideo();
             if (showPlayOverlay) setShowPlayOverlay(false);
@@ -193,6 +205,7 @@ export default function AmbiancePlayer({
           }
           // Handle pauseVideo: pause this individual video then immediately clear the instruction
           if (video.pauseVideo) {
+            clearDelayTimeout(index);
             player.pauseVideo();
             setVideoData &&
               updateObjectArr(setVideoData, index, { pauseVideo: undefined });
@@ -222,6 +235,7 @@ export default function AmbiancePlayer({
               clearTimeout(timeoutRefs.current[index]!);
               timeoutRefs.current[index] = null;
             }
+            clearDelayTimeout(index);
             lastVolumeRef.current[index] = undefined;
 
             if (videoIntervalRefs.current[index]) {
@@ -298,6 +312,7 @@ export default function AmbiancePlayer({
                         volume: initialVideoData?.[index]?.volume || 100,
                         playbackSpeed:
                           initialVideoData?.[index]?.playbackSpeed || 1.0,
+                        loopDelay: initialVideoData?.[index]?.loopDelay,
                         currentTime: initialVideoData?.[index]?.startTime ?? 0,
                         linkError: undefined,
                       });
@@ -351,6 +366,10 @@ export default function AmbiancePlayer({
                     switch (e.data) {
                       // Video started playing after being seeking/buffering/being unpaused
                       case 1: {
+                        // Clears the loop delay if we're currently in a delay phase
+                        if (inDelayPauseRef.current[index]) {
+                          clearDelayTimeout(index);
+                        }
                         const currentTime = player.getCurrentTime();
                         const startTime =
                           videoDataRef.current[index].startTime || 0;
@@ -439,9 +458,18 @@ export default function AmbiancePlayer({
                       }
                       // Video ended, needed for custom endTimes
                       case 0: {
-                        player.seekTo(
-                          videoDataRef.current[index].startTime || 0,
-                        );
+                        const videoData = videoDataRef.current[index];
+                        if (videoData.loopDelay && videoData.loopDelay > 0) {
+                          inDelayPauseRef.current[index] = true;
+                          player.seekTo(videoData.startTime || 0);
+                          player.pauseVideo();
+                          delayTimeoutRefs.current[index] = setTimeout(() => {
+                            inDelayPauseRef.current[index] = false;
+                            player.playVideo();
+                          }, videoData.loopDelay * 1000);
+                        } else {
+                          player.seekTo(videoData.startTime || 0);
+                        }
                         break;
                       }
                     }
@@ -543,6 +571,7 @@ export default function AmbiancePlayer({
       // Clears existing timeout for this video
       if (timeoutRefs.current[index]) {
         clearTimeout(timeoutRefs.current[index]!);
+        timeoutRefs.current[index] = null;
       }
       if (stopping) return;
       const currentTime = player.getCurrentTime();
@@ -552,12 +581,31 @@ export default function AmbiancePlayer({
       if (timeRemaining > 0) {
         timeoutRefs.current[index] = setTimeout(() => {
           const videoData = videoDataRef.current[index];
+          if (videoData.loopDelay && videoData.loopDelay > 0) {
+            inDelayPauseRef.current[index] = true;
+            player.seekTo(videoData.startTime || 0);
+            player.pauseVideo();
+            delayTimeoutRefs.current[index] = setTimeout(() => {
+              inDelayPauseRef.current[index] = false;
+              player.playVideo();
+            }, videoData.loopDelay * 1000);
+            return;
+          }
           player.seekTo(videoData.startTime || 0);
         }, timeRemaining * 1000);
       }
     },
     [],
   );
+
+  // Clears the pending loop delay timeout for a video
+  const clearDelayTimeout = useCallback((index: number) => {
+    inDelayPauseRef.current[index] = false;
+    if (delayTimeoutRefs.current[index]) {
+      clearTimeout(delayTimeoutRefs.current[index]!);
+      delayTimeoutRefs.current[index] = null;
+    }
+  }, []);
 
   const play = useCallback(() => {
     if (
@@ -568,8 +616,10 @@ export default function AmbiancePlayer({
     ) {
       return;
     }
-    playerRefs.current.forEach((player) => {
-      player && player.playVideo();
+    playerRefs.current.forEach((player, index) => {
+      if (!player) return;
+      clearDelayTimeout(index);
+      player.playVideo();
     });
     if (showPlayOverlay) {
       setShowPlayOverlay(false);
@@ -577,8 +627,10 @@ export default function AmbiancePlayer({
   }, []);
 
   const pause = useCallback(() => {
-    playerRefs.current.forEach((player) => {
-      player && player.pauseVideo();
+    playerRefs.current.forEach((player, index) => {
+      if (!player) return;
+      clearDelayTimeout(index);
+      player.pauseVideo();
     });
   }, []);
 
@@ -609,6 +661,7 @@ export default function AmbiancePlayer({
   const rewind = useCallback(() => {
     playerRefs.current.forEach((player, index) => {
       if (!player) return;
+      clearDelayTimeout(index);
       player.seekTo(videoDataRef.current[index].startTime);
       player.playVideo();
       unmutePlayer(player, index);
@@ -622,6 +675,7 @@ export default function AmbiancePlayer({
   const jumpBack = useCallback(() => {
     playerRefs.current.forEach((player, index) => {
       if (!player) return;
+      clearDelayTimeout(index);
       let newTime = player.getCurrentTime() - 10;
       if (
         videoDataRef.current[index].startTime &&
@@ -670,6 +724,7 @@ export default function AmbiancePlayer({
   const jumpForward = useCallback(() => {
     playerRefs.current.forEach((player, index) => {
       if (!player) return;
+      clearDelayTimeout(index);
       let newTime = player.getCurrentTime() + 10;
       if (
         videoDataRef.current[index] &&

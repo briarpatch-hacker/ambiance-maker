@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
           startTime: video?.startTime,
           endTime: video?.endTime,
           playbackSpeed: video?.playbackSpeed,
+          loopDelay: video?.loopDelay,
         });
       }
       transformedBody = {

@@ -51,6 +51,7 @@ async function getSubmission(
     endTime: v.endTime,
     volume: v.volume,
     playbackSpeed: v.playbackSpeed,
+    loopDelay: v.loopDelay,
   }));
 
   return {

@@ -93,10 +93,11 @@
 }
 
 .timeframe_wrapper {
-  margin-bottom: 1.2rem;
+  margin-bottom: 1.5rem;
 }
 
 .sliders_wrapper {
+  margin-bottom: 0.2rem;
 }
 
 .control_button {
@@ -137,8 +138,70 @@
   transform: scaleX(1.08);
 }
 
+.mini_controls_left {
+  display: flex;
+  column-gap: 1.6rem;
+}
+
 .mini_controls_right {
   display: flex;
   align-items: center;
   column-gap: 0.8rem;
+}
+
+.mini_controls_left {
+  width: 2.4rem;
+}
+
+.delay_editor {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--grey-text);
+  font-size: 1.4rem;
+  opacity: 1;
+  transition: opacity 0.15s;
+  padding-top: 0.4rem;
+}
+
+.delay_editor.delay_zero {
+  opacity: 0.85;
+}
+
+.delay_editor:hover,
+.delay_editor:focus-within {
+  opacity: 1;
+}
+
+.delay_label,
+.delay_suffix {
+  user-select: none;
+}
+
+.delay_label {
+  display: flex;
+  column-gap: 0.3rem;
+}
+
+.delay_input {
+  all: unset;
+  box-sizing: border-box;
+  width: 2.2rem;
+  text-align: right;
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  cursor: text;
+  border-radius: 0.2rem;
+}
+
+.delay_input:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-outline-offset);
+}
+
+@media screen and (max-width: 420px) {
+  .delay_label_loop {
+    display: none;
+  }
 }

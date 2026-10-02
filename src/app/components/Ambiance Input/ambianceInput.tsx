@@ -19,11 +19,13 @@ interface AmbianceInputProps {
   currentTime?: number;
   volume?: number;
   playbackSpeed?: number;
+  loopDelay?: number;
   linkError: string | undefined;
   onLinkChange: (link: string, index?: number) => void;
   onVolumeChange: (volume: string, index?: number) => void;
   onSpeedChange: (speed: string, index?: number) => void;
   onTimeframeChange: (start: number, end: number, index?: number) => void;
+  onDelayChange: (delay: number, index?: number) => void;
   videoIndex?: number;
   isIos?: boolean;
   isPlaying?: boolean;
@@ -43,11 +45,13 @@ export default function AmbianceInput({
   currentTime,
   volume,
   playbackSpeed,
+  loopDelay,
   linkError,
   onLinkChange,
   onVolumeChange,
   onSpeedChange,
   onTimeframeChange,
+  onDelayChange,
   videoIndex,
   isIos,
   isPlaying,
@@ -83,6 +87,19 @@ export default function AmbianceInput({
   useEffect(() => {
     validateLink(inputData.link);
   }, [inputData.link]);
+
+  // Used to manage the delay input
+  const delayInputRef = useRef<HTMLInputElement | null>(null);
+  const [isEditingDelay, setIsEditingDelay] = useState(false);
+  const [delayInSeconds, setDelayInSeconds] = useState("0");
+  const applyDelay = useCallback(
+    (value: number) => {
+      const clamped = Math.min(99, Math.max(0, value));
+      onDelayChange(clamped, videoIndex);
+      setDelayInSeconds(String(clamped));
+    },
+    [onDelayChange, videoIndex],
+  );
 
   return (
     <div
@@ -140,14 +157,76 @@ export default function AmbianceInput({
             />
           </div>
           <div className={styles.mini_controls}>
-            <button
-              className={styles.control_button}
-              onClick={() => onPlayPause?.(videoIndex)}
-              aria-label={isPlaying ? "Pause video" : "Play video"}
-              title={isPlaying ? "Pause video" : "Play video"}
+            <div className={styles.mini_controls_left}>
+              <button
+                className={styles.control_button}
+                onClick={() => onPlayPause?.(videoIndex)}
+                aria-label={isPlaying ? "Pause video" : "Play video"}
+                title={isPlaying ? "Pause video" : "Play video"}
+              >
+                {isPlaying ? <Pause /> : <Play />}
+              </button>
+            </div>
+            <div
+              className={classNames(styles.delay_editor, {
+                [styles.delay_zero]: !loopDelay && !isEditingDelay,
+              })}
+              onClick={() => {
+                delayInputRef.current?.focus();
+              }}
             >
-              {isPlaying ? <Pause /> : <Play />}
-            </button>
+              <span className={styles.delay_label}>
+                <div className={styles.delay_label_loop}>Loop</div>
+                <div>Delay:</div>
+              </span>
+              <input
+                ref={delayInputRef}
+                type="text"
+                inputMode="numeric"
+                maxLength={2}
+                className={styles.delay_input}
+                value={isEditingDelay ? delayInSeconds : String(loopDelay ?? 0)}
+                onFocus={(e) => {
+                  setIsEditingDelay(true);
+                  setDelayInSeconds(String(loopDelay ?? 0));
+                  e.target.select();
+                }}
+                onChange={(e) =>
+                  setDelayInSeconds(e.target.value.replace(/\D/g, ""))
+                }
+                onBlur={() => {
+                  applyDelay(parseInt(delayInSeconds, 10) || 0);
+                  setIsEditingDelay(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.currentTarget.blur();
+                  } else if (e.key === "Escape") {
+                    setDelayInSeconds(String(loopDelay ?? 0));
+                    e.currentTarget.blur();
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const next = Math.min(
+                      99,
+                      (parseInt(delayInSeconds, 10) || 0) + 1,
+                    );
+                    setDelayInSeconds(String(next));
+                    onDelayChange(next, videoIndex);
+                  } else if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    const next = Math.max(
+                      0,
+                      (parseInt(delayInSeconds, 10) || 0) - 1,
+                    );
+                    setDelayInSeconds(String(next));
+                    onDelayChange(next, videoIndex);
+                  }
+                }}
+                aria-label="Loop delay in seconds"
+                title="Pause between loops (0–99 seconds)"
+              />
+              <span className={styles.delay_suffix}>s</span>
+            </div>
             <div className={styles.mini_controls_right}>
               <button
                 className={styles.control_button}

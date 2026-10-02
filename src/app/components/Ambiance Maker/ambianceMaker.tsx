@@ -34,6 +34,7 @@ export interface VideoData {
   currentTime?: number;
   volume?: number;
   playbackSpeed?: number;
+  loopDelay?: number;
   isPlaying?: boolean;
   seekTo?: number;
   pauseVideo?: boolean;
@@ -66,6 +67,7 @@ export const createVideoEntry = (): VideoData => ({
   currentTime: undefined,
   volume: undefined,
   playbackSpeed: undefined,
+  loopDelay: undefined,
   isPlaying: undefined,
   seekTo: undefined,
   pauseVideo: undefined,
@@ -106,6 +108,11 @@ export default function AmbianceMaker({
   // Handles when an inputs playback rate changes
   const onSpeedChange = useCallback((speed: string, index = 0) => {
     updateObjectArr(setVideoData, index, { playbackSpeed: parseFloat(speed) });
+  }, []);
+
+  // Handles when an inputs loop delay changes
+  const onDelayChange = useCallback((delay: number, index = 0) => {
+    updateObjectArr(setVideoData, index, { loopDelay: delay });
   }, []);
 
   // Handles per-video play / pause
@@ -259,7 +266,8 @@ export default function AmbianceMaker({
         null;
       if (!match) return;
       const videoId = match[1];
-      text += `${ampersand ? `&` : ``}v${index + 1}=s${video.startTime}e${video.endTime}v${video.volume}r${Math.round(Number(video.playbackSpeed) * 100)}id${videoId}`;
+      const delayToken = video.loopDelay ? `d${video.loopDelay}` : ``;
+      text += `${ampersand ? `&` : ``}v${index + 1}=s${video.startTime}e${video.endTime}v${video.volume}r${Math.round(Number(video.playbackSpeed) * 100)}${delayToken}id${videoId}`;
       ampersand = true;
     });
     async function writeClipboardItem(text: string) {
@@ -644,11 +652,13 @@ export default function AmbianceMaker({
               currentTime={video.currentTime}
               volume={video.volume}
               playbackSpeed={video.playbackSpeed}
+              loopDelay={video.loopDelay}
               linkError={video.linkError}
               onLinkChange={onLinkChange}
               onTimeframeChange={onTimeframeChange}
               onVolumeChange={onVolumeChange}
               onSpeedChange={onSpeedChange}
+              onDelayChange={onDelayChange}
               isPlaying={video.isPlaying}
               onPlayPause={onPlayPause}
               onRewind={onRewind}

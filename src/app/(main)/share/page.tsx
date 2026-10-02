@@ -30,12 +30,14 @@ export default function Page() {
         const end = Number(videoLink.match(/e(\d+)/)?.[1] ?? undefined);
         const volume = Number(videoLink.match(/v(\d+)/)?.[1] ?? undefined);
         const rate = Number(videoLink.match(/r(\d+)/)?.[1] ?? undefined);
+        const delay = Number(videoLink.match(/d(\d+)(?=id)/)?.[1] ?? undefined);
         const id = videoLink.match(/id([\w-]+)/)?.[1];
         if (!id) continue;
         videoData[i].startTime = start;
         videoData[i].endTime = end;
         videoData[i].volume = volume;
         videoData[i].playbackSpeed = rate ? rate / 100 : undefined;
+        videoData[i].loopDelay = delay || undefined;
         videoData[i].src = `https://www.youtube.com/watch?v=${id}`;
       }
       return videoData;

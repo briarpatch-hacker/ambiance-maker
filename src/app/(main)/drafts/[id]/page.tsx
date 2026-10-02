@@ -45,6 +45,7 @@ const getDraft = cache(async (
     endTime: v.endTime,
     volume: v.volume,
     playbackSpeed: v.playbackSpeed,
+    loopDelay: v.loopDelay,
   }));
 
   return {

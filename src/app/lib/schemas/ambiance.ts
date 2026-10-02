@@ -25,6 +25,7 @@ export const videoDataInputSchema = z
     startTime: z.number().min(0).optional(),
     endTime: z.number().min(0).optional(),
     playbackSpeed: z.number().min(0.25).max(2).optional(),
+    loopDelay: z.number().int().min(0).max(99).optional(),
   })
   .refine(
     (data) => {
@@ -60,6 +61,7 @@ export const videoDataStoredSchema = z.object({
   startTime: z.number().min(0).optional(),
   endTime: z.number().min(0).optional(),
   playbackSpeed: z.number().min(0.25).max(2).optional(),
+  loopDelay: z.number().int().min(0).max(99).optional(),
 });
 
 // Legacy schema export for backwards compatibility
@@ -150,6 +152,7 @@ export function transformVideoDataForStorage(
     startTime: video.startTime,
     endTime: video.endTime,
     playbackSpeed: video.playbackSpeed,
+    loopDelay: video.loopDelay,
   }));
 }
 

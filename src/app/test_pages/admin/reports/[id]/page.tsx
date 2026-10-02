@@ -67,6 +67,7 @@ async function getReport(reportId: string): Promise<ReportPageData | null> {
     endTime: v.endTime,
     volume: v.volume,
     playbackSpeed: v.playbackSpeed,
+    loopDelay: v.loopDelay,
   }));
 
   return {
