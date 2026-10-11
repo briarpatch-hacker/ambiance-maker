@@ -7,7 +7,7 @@ import { AmbianceData } from "@/app/components/Ambiance Maker/ambianceMaker";
 import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { cookies } from "next/headers";
-import { getUserId } from "@/app/lib/auth/getCurrentUser";
+import { getUserId, getCurrentUser } from "@/app/lib/auth/getCurrentUser";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -73,6 +73,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function Page({ params }: PageProps) {
   const { id } = await params;
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
   const userId = await getUserId();
   if (!userId) {
     redirect("/login");
@@ -87,7 +91,7 @@ export default async function Page({ params }: PageProps) {
         <AmbianceMaker
           mode="draft"
           ambianceData={draft.ambianceData}
-          user={true}
+          user={user}
           status={draft.status}
         />
       </div>

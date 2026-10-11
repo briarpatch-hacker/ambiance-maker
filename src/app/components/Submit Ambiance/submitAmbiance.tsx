@@ -190,6 +190,18 @@ export default function SubmitAmbiance({
         <div className={styles.instruction}>
           <h2>
             <div>3.</div>
+            <div>Blend and layer your sounds</div>
+          </h2>
+          <p>
+            The best ambiances blend and layer several sources rather than
+            relying on one. Mix, trim, and balance your clips so no single video
+            carries the whole experience.
+          </p>
+        </div>
+
+        <div className={styles.instruction}>
+          <h2>
+            <div>4.</div>
             <div>Polish your title and description</div>
           </h2>
           <p>
@@ -201,7 +213,7 @@ export default function SubmitAmbiance({
 
         <div className={styles.instruction}>
           <h2>
-            <div>4.</div>
+            <div>5.</div>
             <div>Choose the perfect thumbnail</div>
           </h2>
           <p>
@@ -213,7 +225,7 @@ export default function SubmitAmbiance({
 
         <div className={styles.instruction}>
           <h2>
-            <div>5.</div>
+            <div>6.</div>
             <div>Select the right category</div>
           </h2>
           <p>
@@ -225,7 +237,7 @@ export default function SubmitAmbiance({
 
         <div className={styles.instruction}>
           <h2>
-            <div>6.</div>
+            <div>7.</div>
             <div>Check the box below</div>
           </h2>
           <p>

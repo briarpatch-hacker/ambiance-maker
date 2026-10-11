@@ -277,10 +277,6 @@
   flex-direction: row;
 }
 
-.horizontal .date {
-  display: none;
-}
-
 .horizontal .byline {
   display: flex;
   justify-content: flex-start;
@@ -324,10 +320,6 @@
 
   .card_wrapper:not(.vertical) .horizontal .meta_row_left {
     flex-direction: row;
-  }
-
-  .card_wrapper:not(.vertical) .horizontal .date {
-    display: none;
   }
 
   .card_wrapper:not(.vertical) .horizontal .byline {

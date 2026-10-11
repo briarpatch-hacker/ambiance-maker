@@ -203,10 +203,10 @@ export default function AmbianceMaker({
   }, []);
 
   // Toggles the favorite status for this ambiance
-  const favoriteInFlight = useRef(false);
+  const favoriteRequestPending = useRef(false);
   async function handleFavorite() {
-    if (!ambianceData?.id || favoriteInFlight.current) return;
-    favoriteInFlight.current = true;
+    if (!ambianceData?.id || favoriteRequestPending.current) return;
+    favoriteRequestPending.current = true;
     const newFavorited = !isFavorited;
     setIsFavorited(newFavorited);
     try {
@@ -224,7 +224,7 @@ export default function AmbianceMaker({
     } catch {
       setIsFavorited(!newFavorited);
     } finally {
-      favoriteInFlight.current = false;
+      favoriteRequestPending.current = false;
     }
   }
 

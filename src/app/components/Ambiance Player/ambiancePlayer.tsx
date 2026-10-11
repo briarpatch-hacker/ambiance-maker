@@ -408,6 +408,7 @@ export default function AmbiancePlayer({
                               endTime: player.getDuration(),
                               volume: 100,
                               playbackSpeed: 1.0,
+                              loopDelay: undefined,
                               linkError: undefined,
                             });
                           // Starts playing the video if other videos are playing already,
@@ -459,12 +460,12 @@ export default function AmbiancePlayer({
                       // Video ended, needed for custom endTimes
                       case 0: {
                         const videoData = videoDataRef.current[index];
+                        if (inDelayPauseRef.current[index]) break;
                         if (videoData.loopDelay && videoData.loopDelay > 0) {
                           inDelayPauseRef.current[index] = true;
-                          player.seekTo(videoData.startTime || 0);
-                          player.pauseVideo();
                           delayTimeoutRefs.current[index] = setTimeout(() => {
                             inDelayPauseRef.current[index] = false;
+                            player.seekTo(videoData.startTime || 0);
                             player.playVideo();
                           }, videoData.loopDelay * 1000);
                         } else {
@@ -583,10 +584,10 @@ export default function AmbiancePlayer({
           const videoData = videoDataRef.current[index];
           if (videoData.loopDelay && videoData.loopDelay > 0) {
             inDelayPauseRef.current[index] = true;
-            player.seekTo(videoData.startTime || 0);
             player.pauseVideo();
             delayTimeoutRefs.current[index] = setTimeout(() => {
               inDelayPauseRef.current[index] = false;
+              player.seekTo(videoData.startTime || 0);
               player.playVideo();
             }, videoData.loopDelay * 1000);
             return;

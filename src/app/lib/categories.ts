@@ -47,7 +47,7 @@ export const categories: Record<string, any> = {
     Autumn: {},
     Winter: {},
     Halloween: {},
-    Christmas: {},
+    Yuletide: {},
     "Other Holidays": {},
   },
   Urban: {
@@ -324,7 +324,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   Musical: {
     id: 300,
     description:
-      "Mellow study beats, live instruments, and synthesized landscapes.",
+      "Layered beats, live instruments, and synthesized sounds woven together into a single mix.",
     tags: ["melodic", "rhythmic", "immersive"],
     image: {
       src: "/images/categories/musical.jpg",
@@ -575,7 +575,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   Seasonal: {
     id: 700,
     description: "The sounds of each season and the holidays that shape them.",
-    tags: ["spring", "autumn", "halloween", "christmas"],
+    tags: ["spring", "autumn", "halloween", "yuletide"],
     image: {
       src: "/images/categories/horror.jpg",
       alt: "",
@@ -649,11 +649,11 @@ export const categoryMeta: Record<string, CategoryMeta> = {
     },
     imageStyle: {},
   },
-  Christmas: {
+  Yuletide: {
     id: 760,
     description:
-      "Crackling fires, bells, and carols in the air. December at its most familiar.",
-    tags: ["festive", "carols", "yuletide"],
+      "Crackling fires, ringing bells, and carols on the night air. The winter holidays at their coziest.",
+    tags: ["festive", "carols", "fireside"],
     image: {
       src: "/images/categories/horror.jpg",
       alt: "",
