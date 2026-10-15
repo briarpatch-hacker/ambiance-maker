@@ -71,6 +71,7 @@ export default function VolumeSlider({
         onValueChange={onVolumeChange}
         ariaLabel={"Volume slider"}
         videoIndex={videoIndex}
+        editable
       />
     </div>
   );

@@ -21,6 +21,32 @@ export function convertToTimecode(videoDuration: number) {
   return timecode;
 }
 
+// Converts a raw digit buffer (grouped from the right) into total seconds,
+// letting over-60 minute/second chunks roll over (e.g. "13:99" -> 879s).
+function digitsToSeconds(digits: string): number {
+  const d = digits.replace(/\D/g, "");
+  if (!d) return 0;
+  const ss = parseInt(d.slice(-2), 10) || 0;
+  const mm = parseInt(d.slice(-4, -2) || "0", 10) || 0;
+  const hh = parseInt(d.slice(0, -4) || "0", 10) || 0;
+  return hh * 3600 + mm * 60 + ss;
+}
+
+// Parses a typed time into total seconds. When colons are present, the segments
+// are read right-to-left as seconds, minutes, hours ("3:4" -> 3:04,
+// "1:3:4" -> 1:03:04); any extra leading segments are ignored. Without colons,
+// the digits are grouped from the right ("128" -> 1:28).
+function parseTime(input: string): number {
+  if (input.includes(":")) {
+    const nums = input.split(":").map((p) => parseInt(p, 10) || 0);
+    const ss = nums[nums.length - 1] || 0;
+    const mm = nums[nums.length - 2] || 0;
+    const hh = nums[nums.length - 3] || 0;
+    return hh * 3600 + mm * 60 + ss;
+  }
+  return digitsToSeconds(input);
+}
+
 // Creates a range slider for a video
 interface VideoRangeSliderProps {
   videoDuration: number;
@@ -52,9 +78,17 @@ export default function VideoRangeSlider({
   const endThumbRef = useRef<null | HTMLDivElement>(null);
   const activeThumb = useRef<"start" | "end" | null>(null);
   const trackRef = useRef<null | HTMLDivElement>(null);
+  // When a track press ends an edit, skip the blur-commit so the click-move wins
+  const skipCommitRef = useRef(false);
+  // After committing/canceling via keyboard, focus this thumb to keep flow going
+  const shouldFocusThumbRef = useRef<"start" | "end" | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [showTransition, setShowTransition] = useState(true);
   const [showIndicator, setShowIndicator] = useState(true);
+  const [editingThumb, setEditingThumb] = useState<"start" | "end" | null>(
+    null,
+  );
+  const [editValue, setEditValue] = useState("");
   const timeoutRef = useRef<NodeJS.Timeout>(undefined);
   const prevCurrentTimeRef = useRef(0);
   const indicatorTimeoutRef = useRef<NodeJS.Timeout>(undefined);
@@ -166,7 +200,10 @@ export default function VideoRangeSlider({
 
   // Moves the start thumb when user presses on arrow keys
   function handleKeydownStart(e: React.KeyboardEvent) {
-    if (e.key === "ArrowRight") {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      startEditing("start");
+    } else if (e.key === "ArrowRight") {
       if (start + 1 < end) {
         setStart(start + 1);
         onTimeframeChange(start + 1, end, videoIndex);
@@ -181,7 +218,10 @@ export default function VideoRangeSlider({
 
   // Moves the end thumb when user presses on arrow keys
   function handleKeydownEnd(e: React.KeyboardEvent) {
-    if (e.key === "ArrowRight") {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      startEditing("end");
+    } else if (e.key === "ArrowRight") {
       if (end + 1 <= videoDuration) {
         setEnd(end + 1);
         onTimeframeChange(start, end + 1, videoIndex);
@@ -229,13 +269,219 @@ export default function VideoRangeSlider({
 
   // Moves the closet thumb when user presses down on the track
   function handleMouseDown(e: React.MouseEvent) {
+    skipCommitRef.current = true;
     handleDragStart(e.clientX, e.currentTarget as HTMLElement);
   }
 
   // Moves the closest thumb when user touches the track
   function handleTouchStart(e: React.TouchEvent) {
     e.preventDefault();
+    skipCommitRef.current = true;
     handleDragStart(e.touches[0].clientX, e.currentTarget as HTMLElement);
+  }
+
+  // Max digits a user can type, based on whether the video reaches an hour
+  const maxDigits = videoDuration >= 3600 ? 6 : 4;
+
+  // Clamps a time to the valid range for the given thumb (start < end)
+  function clampTime(thumb: "start" | "end", seconds: number) {
+    return thumb === "start"
+      ? Math.max(0, Math.min(seconds, end - 1))
+      : Math.min(videoDuration, Math.max(seconds, start + 1));
+  }
+
+  // Opens the editor for a thumb, seeding the input with its current time
+  function startEditing(thumb: "start" | "end") {
+    skipCommitRef.current = false;
+    const current = thumb === "start" ? start : end;
+    setEditValue(convertToTimecode(current));
+    setEditingThumb(thumb);
+  }
+
+  // Commits the typed time, snapping it into the valid range
+  function commitEdit(thumb: "start" | "end") {
+    if (skipCommitRef.current) {
+      skipCommitRef.current = false;
+    } else if (editValue.replace(/\D/g, "")) {
+      const seconds = clampTime(thumb, parseTime(editValue));
+      if (thumb === "start") {
+        setStart(seconds);
+        onTimeframeChange(seconds, end, videoIndex);
+      } else {
+        setEnd(seconds);
+        onTimeframeChange(start, seconds, videoIndex);
+      }
+    }
+    setEditingThumb(null);
+    if (shouldFocusThumbRef.current) {
+      const target = shouldFocusThumbRef.current;
+      shouldFocusThumbRef.current = null;
+      setTimeout(() => {
+        (target === "start" ? startThumbRef : endThumbRef).current?.focus();
+      }, 0);
+    }
+  }
+
+  // Steps the edited time by one second and keeps the input in sync
+  function stepEdit(thumb: "start" | "end", direction: 1 | -1) {
+    const base = editValue
+      ? parseTime(editValue)
+      : thumb === "start"
+        ? start
+        : end;
+    const next = clampTime(thumb, base + direction);
+    if (thumb === "start") {
+      setStart(next);
+      onTimeframeChange(next, end, videoIndex);
+    } else {
+      setEnd(next);
+      onTimeframeChange(start, next, videoIndex);
+    }
+    setEditValue(convertToTimecode(next));
+  }
+
+  // On a thumb label: a clean click opens the editor; a drag past a small
+  // threshold moves the thumb. The whole drag is handled here (rather than
+  // handing off to the drag effect) so it engages without lag, and the
+  // threshold gate stops tiny click jitter from nudging the thumb. The thumb
+  // is only focused once a drag actually starts, so a click doesn't flash its
+  // focus outline.
+  function handleLabelPointerDown(
+    thumb: "start" | "end",
+    clientX: number,
+    clientY: number,
+  ) {
+    const DRAG_THRESHOLD = 4;
+    let started = false;
+
+    function cleanup() {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    }
+    // Moves the active thumb to a pointer position, clamped past the other thumb
+    function moveTo(moveX: number) {
+      if (!trackRef.current) return;
+      const rect = trackRef.current.getBoundingClientRect();
+      const newPoint = Math.round(
+        videoDuration *
+          Math.max(0, Math.min(1, (moveX - rect.left) / rect.width)),
+      );
+      if (thumb === "start") {
+        const newStart = newPoint < end ? newPoint : end - 1;
+        setStart(newStart);
+        onTimeframeChange(newStart, end, videoIndex);
+      } else {
+        const newEnd = newPoint > start ? newPoint : start + 1;
+        setEnd(newEnd);
+        onTimeframeChange(start, newEnd, videoIndex);
+      }
+    }
+    function onMove(moveX: number, moveY: number) {
+      if (started) {
+        moveTo(moveX);
+        return;
+      }
+      if (
+        Math.abs(moveX - clientX) > DRAG_THRESHOLD ||
+        Math.abs(moveY - clientY) > DRAG_THRESHOLD
+      ) {
+        started = true;
+        activeThumb.current = thumb;
+        (thumb === "start" ? startThumbRef : endThumbRef).current?.focus();
+        setShowTransition(false);
+        moveTo(moveX);
+      }
+    }
+    function onMouseMove(e: MouseEvent) {
+      onMove(e.clientX, e.clientY);
+    }
+    function onMouseUp() {
+      cleanup();
+      if (started) {
+        setShowTransition(true);
+      } else {
+        startEditing(thumb);
+      }
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (started) e.preventDefault();
+      onMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+    function onTouchEnd() {
+      cleanup();
+      if (started) {
+        setShowTransition(true);
+      } else {
+        startEditing(thumb);
+      }
+    }
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd);
+  }
+
+  // Renders a thumb's label as either the editable input or the timecode text
+  function renderThumbLabel(thumb: "start" | "end") {
+    if (editingThumb === thumb) {
+      return (
+        <input
+          className={styles.thumb_input}
+          size={editValue.length || 1}
+          value={editValue}
+          inputMode="numeric"
+          maxLength={maxDigits + 2}
+          autoFocus
+          aria-label={ariaLabel}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onFocus={(e) => e.target.select()}
+          onChange={(e) =>
+            setEditValue(e.target.value.replace(/[^\d:]/g, ""))
+          }
+          onBlur={() => commitEdit(thumb)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === "Enter") {
+              shouldFocusThumbRef.current = thumb;
+              e.currentTarget.blur();
+            } else if (e.key === "Escape") {
+              skipCommitRef.current = true;
+              shouldFocusThumbRef.current = thumb;
+              e.currentTarget.blur();
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              stepEdit(thumb, 1);
+            } else if (e.key === "ArrowDown") {
+              e.preventDefault();
+              stepEdit(thumb, -1);
+            }
+          }}
+        />
+      );
+    }
+    return (
+      <div
+        className={styles.text_wrapper}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          handleLabelPointerDown(thumb, e.clientX, e.clientY);
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          handleLabelPointerDown(
+            thumb,
+            e.touches[0].clientX,
+            e.touches[0].clientY,
+          );
+        }}
+      >
+        {convertToTimecode(thumb === "start" ? start : end)}
+      </div>
+    );
   }
 
   return (
@@ -260,6 +506,7 @@ export default function VideoRangeSlider({
         role="slider"
         tabIndex={0}
         aria-label={ariaLabel}
+        aria-keyshortcuts="Enter"
         onKeyDown={handleKeydownStart}
         aria-valuemin={0}
         aria-valuemax={end - 1}
@@ -267,9 +514,13 @@ export default function VideoRangeSlider({
         aria-valuetext={start.toString()}
         ref={startThumbRef}
       >
-        <label className={styles.thumb_label}>
-          <div className={styles.text_wrapper}>{convertToTimecode(start)}</div>
-        </label>
+        <div
+          className={styles.thumb_label}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          {renderThumbLabel("start")}
+        </div>
       </div>
       <div
         className={classNames(styles.thumb, styles.end, {
@@ -283,12 +534,17 @@ export default function VideoRangeSlider({
         aria-valuenow={end}
         aria-valuetext={end.toString()}
         aria-label={ariaLabel}
+        aria-keyshortcuts="Enter"
         onKeyDown={handleKeydownEnd}
         ref={endThumbRef}
       >
-        <label className={styles.thumb_label}>
-          <div className={styles.text_wrapper}>{convertToTimecode(end)}</div>
-        </label>
+        <div
+          className={styles.thumb_label}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          {renderThumbLabel("end")}
+        </div>
       </div>
       {typeof currentTime === "number" && videoDuration && (
         <div

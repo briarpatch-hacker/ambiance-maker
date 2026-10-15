@@ -11,6 +11,7 @@ interface DiscreteSliderProps {
   onValueChange: (value: string, videoIndex?: number) => void;
   ariaLabel: string;
   videoIndex?: number;
+  editable?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -21,6 +22,7 @@ export default function DiscreteSlider({
   onValueChange,
   ariaLabel,
   videoIndex,
+  editable,
   style,
 }: DiscreteSliderProps) {
   const [value, setValue] = useState(defaultValue);
@@ -28,9 +30,21 @@ export default function DiscreteSlider({
   const [fill, setFill] = useState((100 * index.current) / (values.length - 1));
   const [isDragging, setIsDragging] = useState(false);
   const [showTransition, setShowTransition] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
   const thumbRef = useRef<null | HTMLDivElement>(null);
   const trackRef = useRef<null | HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>(undefined);
+  // When a track press ends an edit, skip the blur-commit so the click-move wins
+  const skipCommitRef = useRef(false);
+  // After committing/canceling via keyboard, focus the thumb to keep flow going
+  const shouldFocusThumbRef = useRef(false);
+
+  // Longest numeric portion across values[], used to cap the editable input
+  const inputMaxLength = Math.max(
+    1,
+    ...values.map((v) => v.match(/[\d.]+/)?.[0].length ?? 1),
+  );
 
   // Uses the currentValue prop to sync the slider
   useEffect(() => {
@@ -108,7 +122,12 @@ export default function DiscreteSlider({
 
   // Moves the thumb when user presses on arrow keys
   function handleKeydown(e: React.KeyboardEvent) {
-    if (e.key === "ArrowRight") {
+    if (e.key === "Enter") {
+      if (editable) {
+        e.preventDefault();
+        startEditing();
+      }
+    } else if (e.key === "ArrowRight") {
       if (index.current < values.length - 1) {
         index.current++;
         setFill((100 * index.current) / (values.length - 1));
@@ -156,13 +175,158 @@ export default function DiscreteSlider({
 
   // Moves the thumb when user presses down on the track
   function handleMouseDown(e: React.MouseEvent) {
+    skipCommitRef.current = true;
     handleDragStart(e.clientX, e.currentTarget as HTMLElement);
   }
 
   // Moves the thumb when user touches the track
   function handleTouchStart(e: React.TouchEvent) {
     e.preventDefault();
+    skipCommitRef.current = true;
     handleDragStart(e.touches[0].clientX, e.currentTarget as HTMLElement);
+  }
+
+  // Grabs the thumb for dragging, anchored at its current position so a click
+  // on the handle doesn't jump it to the press point (and snap back on release)
+  function handleThumbPointerDown() {
+    if (!trackRef.current) return;
+    skipCommitRef.current = true;
+    const rect = trackRef.current.getBoundingClientRect();
+    const thumbX = rect.left + (fill / 100) * rect.width;
+    handleDragStart(thumbX, trackRef.current);
+  }
+
+  // Finds the values[] index whose number is closest to a typed value
+  function findNearestIndex(input: string): number | null {
+    const parsed = parseFloat(input);
+    if (Number.isNaN(parsed)) return null;
+    let nearest = 0;
+    let nearestDiff = Infinity;
+    for (let i = 0; i < values.length; i++) {
+      const diff = Math.abs(parseFloat(values[i]) - parsed);
+      if (diff < nearestDiff) {
+        nearestDiff = diff;
+        nearest = i;
+      }
+    }
+    return nearest;
+  }
+
+  // Enters edit mode, seeding the input with the current numeric value
+  function startEditing() {
+    skipCommitRef.current = false;
+    setEditValue(String(parseFloat(value)));
+    setIsEditing(true);
+  }
+
+  // Commits a typed value by snapping to the nearest entry in values[]
+  function commitEdit() {
+    if (skipCommitRef.current) {
+      skipCommitRef.current = false;
+    } else {
+      const nearest = findNearestIndex(editValue);
+      if (nearest !== null) {
+        index.current = nearest;
+        setFill((100 * nearest) / (values.length - 1));
+        setValue(values[nearest]);
+        onValueChange(values[nearest], videoIndex);
+      }
+    }
+    setIsEditing(false);
+    if (shouldFocusThumbRef.current) {
+      shouldFocusThumbRef.current = false;
+      setTimeout(() => {
+        thumbRef.current?.focus();
+      }, 0);
+    }
+  }
+
+  // Moves the current value by one step and keeps the editing input in sync
+  function stepValue(direction: 1 | -1) {
+    const nearest = findNearestIndex(editValue);
+    const base = nearest !== null ? nearest : index.current;
+    const nextIndex = Math.min(
+      values.length - 1,
+      Math.max(0, base + direction),
+    );
+    index.current = nextIndex;
+    setFill((100 * nextIndex) / (values.length - 1));
+    setValue(values[nextIndex]);
+    onValueChange(values[nextIndex], videoIndex);
+    setEditValue(String(parseFloat(values[nextIndex])));
+  }
+
+  // On the editable label: a clean click opens the input, while a drag past a
+  // small threshold moves the thumb. The whole drag is handled here (no handoff,
+  // so no lag), and crucially no drag is started on a clean click — so opening
+  // the input never coincides with a drag ending.
+  function handleLabelPointerDown(clientX: number, clientY: number) {
+    const DRAG_THRESHOLD = 4;
+    let started = false;
+
+    function cleanup() {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    }
+    // Moves the thumb to the nearest value for a pointer position
+    function moveTo(moveX: number) {
+      if (!trackRef.current) return;
+      const rect = trackRef.current.getBoundingClientRect();
+      const percentage = Math.max(
+        0,
+        Math.min(1, (moveX - rect.left) / rect.width),
+      );
+      const newIndex = Math.round(percentage * (values.length - 1));
+      index.current = newIndex;
+      setFill((100 * newIndex) / (values.length - 1));
+      setValue(values[newIndex]);
+      onValueChange(values[newIndex], videoIndex);
+    }
+    function onMove(moveX: number, moveY: number) {
+      if (started) {
+        moveTo(moveX);
+        return;
+      }
+      if (
+        Math.abs(moveX - clientX) > DRAG_THRESHOLD ||
+        Math.abs(moveY - clientY) > DRAG_THRESHOLD
+      ) {
+        started = true;
+        thumbRef.current?.focus();
+        setShowTransition(false);
+        moveTo(moveX);
+      }
+    }
+    function onMouseMove(e: MouseEvent) {
+      onMove(e.clientX, e.clientY);
+    }
+    function onMouseUp() {
+      cleanup();
+      if (started) {
+        setShowTransition(true);
+      } else {
+        startEditing();
+      }
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (started) e.preventDefault();
+      onMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+    function onTouchEnd() {
+      cleanup();
+      if (started) {
+        setShowTransition(true);
+      } else {
+        startEditing();
+      }
+    }
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd);
   }
   return (
     <div
@@ -190,12 +354,84 @@ export default function DiscreteSlider({
         aria-valuenow={index.current}
         aria-valuetext={value}
         aria-label={ariaLabel}
+        aria-keyshortcuts={editable ? "Enter" : undefined}
         onKeyDown={handleKeydown}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          handleThumbPointerDown();
+        }}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleThumbPointerDown();
+        }}
         ref={thumbRef}
       >
-        <label className={styles.thumb_label}>
-          <div className={styles.text_wrapper}>{value}</div>
-        </label>
+        <div
+          className={styles.thumb_label}
+          onMouseDown={editable ? (e) => e.stopPropagation() : undefined}
+          onTouchStart={editable ? (e) => e.stopPropagation() : undefined}
+        >
+          {editable && isEditing ? (
+            <input
+              className={styles.thumb_input}
+              value={editValue}
+              inputMode="decimal"
+              maxLength={inputMaxLength}
+              autoFocus
+              aria-label={ariaLabel}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) =>
+                setEditValue(e.target.value.replace(/[^\d.]/g, ""))
+              }
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === "Enter") {
+                  shouldFocusThumbRef.current = true;
+                  e.currentTarget.blur();
+                } else if (e.key === "Escape") {
+                  skipCommitRef.current = true;
+                  shouldFocusThumbRef.current = true;
+                  e.currentTarget.blur();
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  stepValue(1);
+                } else if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  stepValue(-1);
+                }
+              }}
+            />
+          ) : (
+            <div
+              className={styles.text_wrapper}
+              onMouseDown={
+                editable
+                  ? (e) => {
+                      e.stopPropagation();
+                      handleLabelPointerDown(e.clientX, e.clientY);
+                    }
+                  : undefined
+              }
+              onTouchStart={
+                editable
+                  ? (e) => {
+                      e.stopPropagation();
+                      handleLabelPointerDown(
+                        e.touches[0].clientX,
+                        e.touches[0].clientY,
+                      );
+                    }
+                  : undefined
+              }
+            >
+              {value}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

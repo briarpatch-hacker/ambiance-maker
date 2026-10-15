@@ -33,6 +33,7 @@ export interface VideoData {
   src?: string;
   linkError?: string;
   title?: string;
+  channel?: string;
   duration?: number;
   startTime?: number;
   endTime?: number;
@@ -65,6 +66,27 @@ function createUrl({ src, startTime, endTime }: VideoData): string | false {
   if (endTime) params.set("end", endTime.toString());
   params.set("enablejsapi", "1");
   return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+}
+
+// getVideoData().author is empty in the IFrame API, so fetch the channel
+// name from the oEmbed endpoint instead.
+async function fetchChannelName(
+  videoId: string,
+): Promise<string | undefined> {
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=${encodeURIComponent(
+        `https://www.youtube.com/watch?v=${videoId}`,
+      )}&format=json`,
+    );
+    if (!res.ok) return undefined;
+    const data = await res.json();
+    return typeof data.author_name === "string" && data.author_name
+      ? data.author_name
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export default function AmbiancePlayer({
@@ -262,6 +284,7 @@ export default function AmbiancePlayer({
               setVideoData &&
                 updateObjectArr(setVideoData, index, {
                   title: undefined,
+                  channel: undefined,
                   duration: undefined,
                   linkError: undefined,
                 });
@@ -316,6 +339,19 @@ export default function AmbiancePlayer({
                         currentTime: initialVideoData?.[index]?.startTime ?? 0,
                         linkError: undefined,
                       });
+                    // Channel name isn't available from getVideoData(); fetch via oEmbed
+                    const readyVideoId = player.getVideoData().video_id;
+                    if (readyVideoId) {
+                      fetchChannelName(readyVideoId).then((channel) => {
+                        if (
+                          channel &&
+                          prevCuedVideoIdsRef.current[index] === readyVideoId
+                        ) {
+                          setVideoData &&
+                            updateObjectArr(setVideoData, index, { channel });
+                        }
+                      });
+                    }
                     // Starts playing the video if other videos are playing already,
                     // or if this video itself was playing before the link was replaced
                     const isOtherVideoPlaying =
@@ -366,10 +402,6 @@ export default function AmbiancePlayer({
                     switch (e.data) {
                       // Video started playing after being seeking/buffering/being unpaused
                       case 1: {
-                        // Clears the loop delay if we're currently in a delay phase
-                        if (inDelayPauseRef.current[index]) {
-                          clearDelayTimeout(index);
-                        }
                         const currentTime = player.getCurrentTime();
                         const startTime =
                           videoDataRef.current[index].startTime || 0;
@@ -403,6 +435,7 @@ export default function AmbiancePlayer({
                           setVideoData &&
                             updateObjectArr(setVideoData, index, {
                               title: currentTitle,
+                              channel: undefined,
                               duration: player.getDuration(),
                               startTime: 0,
                               endTime: player.getDuration(),
@@ -411,6 +444,18 @@ export default function AmbiancePlayer({
                               loopDelay: undefined,
                               linkError: undefined,
                             });
+                          // Channel name isn't available from getVideoData(); fetch via oEmbed
+                          fetchChannelName(cuedVideoId).then((channel) => {
+                            if (
+                              channel &&
+                              prevCuedVideoIdsRef.current[index] === cuedVideoId
+                            ) {
+                              setVideoData &&
+                                updateObjectArr(setVideoData, index, {
+                                  channel,
+                                });
+                            }
+                          });
                           // Starts playing the video if other videos are playing already,
                           // or if this video itself was playing before the link was replaced
                           const isOtherVideoPlaying =
@@ -463,9 +508,10 @@ export default function AmbiancePlayer({
                         if (inDelayPauseRef.current[index]) break;
                         if (videoData.loopDelay && videoData.loopDelay > 0) {
                           inDelayPauseRef.current[index] = true;
+                          player.seekTo(videoData.startTime || 0);
+                          player.pauseVideo();
                           delayTimeoutRefs.current[index] = setTimeout(() => {
                             inDelayPauseRef.current[index] = false;
-                            player.seekTo(videoData.startTime || 0);
                             player.playVideo();
                           }, videoData.loopDelay * 1000);
                         } else {
@@ -482,6 +528,7 @@ export default function AmbiancePlayer({
                       setVideoData &&
                         updateObjectArr(setVideoData, index, {
                           title: undefined,
+                          channel: undefined,
                           duration: undefined,
                           linkError: `Video not found`,
                         });
@@ -501,6 +548,7 @@ export default function AmbiancePlayer({
                             setVideoData &&
                               updateObjectArr(setVideoData, index, {
                                 title: undefined,
+                                channel: undefined,
                                 duration: undefined,
                                 linkError:
                                   text === "Bad Request"
@@ -511,6 +559,7 @@ export default function AmbiancePlayer({
                             setVideoData &&
                               updateObjectArr(setVideoData, index, {
                                 title: undefined,
+                                channel: undefined,
                                 duration: undefined,
                                 linkError: `Video not found`,
                               });
@@ -545,6 +594,7 @@ export default function AmbiancePlayer({
               setVideoData &&
                 updateObjectArr(setVideoData, index, {
                   title: undefined,
+                  channel: undefined,
                   duration: undefined,
                   linkError: `Video not found`,
                 });
@@ -585,9 +635,9 @@ export default function AmbiancePlayer({
           if (videoData.loopDelay && videoData.loopDelay > 0) {
             inDelayPauseRef.current[index] = true;
             player.pauseVideo();
+            player.seekTo(videoData.startTime || 0);
             delayTimeoutRefs.current[index] = setTimeout(() => {
               inDelayPauseRef.current[index] = false;
-              player.seekTo(videoData.startTime || 0);
               player.playVideo();
             }, videoData.loopDelay * 1000);
             return;

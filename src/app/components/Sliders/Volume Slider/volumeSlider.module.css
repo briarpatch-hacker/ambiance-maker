@@ -11,6 +11,10 @@
   cursor: pointer;
 }
 
+.toggle_volume:focus-visible {
+  outline: var(--focus-outline);
+}
+
 .volume_slider svg {
   min-width: 3.6rem;
   height: 2.4rem;

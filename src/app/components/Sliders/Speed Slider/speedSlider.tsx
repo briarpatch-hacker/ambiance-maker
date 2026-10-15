@@ -39,6 +39,7 @@ export default function SpeedSlider({
         onValueChange={onValueChange}
         ariaLabel={"Video speed slider"}
         videoIndex={videoIndex}
+        editable
       />
     </div>
   );

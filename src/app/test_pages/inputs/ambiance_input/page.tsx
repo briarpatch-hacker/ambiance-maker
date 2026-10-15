@@ -31,6 +31,7 @@ export default function Page() {
         />
         <AmbianceInput
           videoTitle="Calm waves"
+          videoChannel="Really Long Nature Sounds Channel Name That Should Truncate"
           linkError={undefined}
           videoDuration={56543}
           onLinkChange={onLinkChange}

@@ -37,13 +37,14 @@
 }
 
 .thumb:focus {
-  outline: 0.2rem solid rgba(0, 34, 255, 0.7);
-  outline-offset: 0rem;
+  background-color: rgb(215, 220, 255);
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-outline-offset);
 }
 
 .thumb_label {
   left: 50%;
-  transform: translateX(-50%) translateY(-160%);
+  transform: translateX(-50%) translateY(-152%);
   color: var(--grey-text);
   font-size: 1.6rem;
 }
@@ -51,4 +52,21 @@
 .text_wrapper {
   user-select: none;
   cursor: pointer;
+}
+
+.thumb_input {
+  all: unset;
+  box-sizing: border-box;
+  field-sizing: content;
+  text-align: center;
+  color: var(--grey-text);
+  font-size: 1.6rem;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 0.3rem;
+  cursor: text;
+}
+
+.thumb_input:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-outline-offset);
 }

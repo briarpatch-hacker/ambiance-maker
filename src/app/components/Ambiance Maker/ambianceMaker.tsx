@@ -28,6 +28,7 @@ export interface VideoData {
   src?: string;
   linkError?: string;
   title?: string;
+  channel?: string;
   duration?: number;
   startTime?: number;
   endTime?: number;
@@ -646,6 +647,7 @@ export default function AmbianceMaker({
           return (
             <AmbianceInput
               videoTitle={video.title}
+              videoChannel={video.channel}
               videoDuration={video.duration}
               startTime={video.startTime}
               endTime={video.endTime}

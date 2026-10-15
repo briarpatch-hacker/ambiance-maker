@@ -13,6 +13,7 @@ import Backwards from "@/app/components/Icons/backwards";
 
 interface AmbianceInputProps {
   videoTitle: string | undefined;
+  videoChannel?: string;
   videoDuration: number | undefined;
   startTime?: number;
   endTime?: number;
@@ -39,6 +40,7 @@ interface AmbianceInputProps {
 
 export default function AmbianceInput({
   videoTitle,
+  videoChannel,
   videoDuration,
   startTime,
   endTime,
@@ -129,6 +131,22 @@ export default function AmbianceInput({
         )}
       </div>
       {!!videoTitle && <h1 title={videoTitle}>{videoTitle}</h1>}
+      {!!videoTitle &&
+        (videoChannel ? (
+          <div className={styles.video_channel} title={videoChannel}>
+            {videoChannel}
+          </div>
+        ) : (
+          <div
+            className={classNames(
+              styles.video_channel,
+              styles.channel_placeholder,
+            )}
+            aria-hidden="true"
+          >
+            Channel Name Loading...
+          </div>
+        ))}
       {!!videoDuration && (
         <div className={styles.video_controls_wrapper}>
           <div className={styles.timeframe_wrapper}>
