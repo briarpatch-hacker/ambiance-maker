@@ -171,19 +171,20 @@ export default function SubmitAmbiance({
           <p>
             Your username{" "}
             <span style={{ whiteSpace: "nowrap" }}>"{username}"</span> will be
-            locked in after your first publish. Make sure it's original and
-            appropriate.
+            locked in after you publish your first ambiance. Make sure it's
+            original and appropriate for the site.
           </p>
         </div>
 
         <div className={styles.instruction}>
           <h2>
             <div>2.</div>
-            <div>Make sure your ambiance is suitable for all ages</div>
+            <div>Make sure your ambiance is suitable for all audiences</div>
           </h2>
           <p>
-            No graphic, explicit, or controversial material. If you're
-            questioning whether something crosses the line, it probably does.
+            Whatever its mood, your ambiance should create an atmosphere anyone
+            can enjoy. Keep it timeless, not topical, and free of graphic or
+            explicit material.
           </p>
         </div>
 
@@ -193,9 +194,9 @@ export default function SubmitAmbiance({
             <div>Blend and layer your sounds</div>
           </h2>
           <p>
-            The best ambiances blend and layer several sources rather than
-            relying on one. Mix, trim, and balance your clips so no single video
-            carries the whole experience.
+            The most immersive ambiances weave together several sources instead
+            of leaning on just one. Mix, trim, and balance your clips so no
+            single video carries the whole experience.
           </p>
         </div>
 
@@ -229,9 +230,9 @@ export default function SubmitAmbiance({
             <div>Select the right category</div>
           </h2>
           <p>
-            Take your time getting familiar with the site's categories and
-            choose the one that best fits your ambiance. Ambiances placed in the
-            wrong category may be rejected.
+            Take a moment to explore the categories and choose the one that best
+            fits your ambiance. The right category helps your ambiance reach
+            listeners looking for that kind of experience.
           </p>
         </div>
 

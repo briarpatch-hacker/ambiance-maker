@@ -121,6 +121,30 @@ export default function PrivacyPolicy() {
             endorsed by, or sponsored by Google LLC, YouTube, or any of their
             subsidiaries.
           </p>
+          <h3>YouTube API Services</h3>
+          <p>
+            Ambiance Maker uses YouTube API Services to embed and play videos.
+            When a video is loaded or played, YouTube may collect information
+            about your device and viewing activity as described in the{" "}
+            <a
+              className={styles.link}
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google Privacy Policy
+            </a>
+            . Use of YouTube content on this website is also subject to the{" "}
+            <a
+              className={styles.link}
+              href="https://www.youtube.com/t/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              YouTube Terms of Service
+            </a>
+            .
+          </p>
         </section>
 
         <section>

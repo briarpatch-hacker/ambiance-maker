@@ -40,7 +40,7 @@
   box-sizing: border-box;
   align-self: flex-start;
   font-size: 2.4rem;
-  margin: 0.6rem 0.8rem 0rem;
+  margin: 0.5rem 0.8rem 0rem;
   color: var(--grey-text);
   display: -webkit-box;
   -webkit-line-clamp: 2;

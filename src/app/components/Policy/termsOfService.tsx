@@ -8,9 +8,7 @@ export default function TermsOfService() {
 
         <section>
           <h2>Agreement to Terms</h2>
-          <p>
-            By using Ambiance Maker, you agree to these Terms of Service.
-          </p>
+          <p>By using Ambiance Maker, you agree to these Terms of Service.</p>
         </section>
 
         <section>
@@ -26,12 +24,14 @@ export default function TermsOfService() {
         <section>
           <h2>User Accounts</h2>
           <p>
-            Accounts are created through third-party sign-in. By creating an account:
+            Accounts are created through third-party sign-in. By creating an
+            account:
           </p>
           <ul>
             <li>You must be at least 13 years of age</li>
             <li>
-              You are responsible for all activity that occurs under your account
+              You are responsible for all activity that occurs under your
+              account
             </li>
             <li>You must not misrepresent your identity</li>
           </ul>
@@ -50,8 +50,8 @@ export default function TermsOfService() {
           </p>
           <ul>
             <li>
-              Submissions are subject to review and may be accepted, rejected, or
-              removed at our discretion
+              Submissions are subject to review and may be accepted, rejected,
+              or removed at our discretion
             </li>
             <li>Accepted content may be publicly displayed on the website</li>
             <li>
@@ -73,10 +73,13 @@ export default function TermsOfService() {
               Attempt to gain unauthorized access to the website or its systems
             </li>
             <li>Use automated tools or scripts to interact with the website</li>
-            <li>Submit content that is illegal, harmful, or otherwise inappropriate</li>
             <li>
-              Engage in activity intended to disrupt or degrade the website&apos;s
-              operation
+              Submit content that is illegal, harmful, or otherwise
+              inappropriate
+            </li>
+            <li>
+              Engage in activity intended to disrupt or degrade the
+              website&apos;s operation
             </li>
             <li>Use the website for any unlawful purpose</li>
           </ul>
@@ -93,9 +96,30 @@ export default function TermsOfService() {
         <section>
           <h2>Third-Party Content</h2>
           <p>
-            Ambiance Maker embeds video content from YouTube. We do not host or
-            own this content and are not responsible for its availability,
-            accuracy, or appropriateness.
+            Ambiances do not contain video or audio files. They reference
+            publicly available YouTube videos and play them through
+            YouTube&apos;s embedded player. Ambiance Maker does not host, copy,
+            or distribute this content, and all videos remain the property of
+            their respective owners. We are not responsible for the
+            availability, accuracy, or appropriateness of embedded content.
+          </p>
+          <p>
+            Ambiance Maker uses YouTube API Services. By using the website, you
+            agree to be bound by the{" "}
+            <a
+              className={styles.link}
+              href="https://www.youtube.com/t/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              YouTube Terms of Service
+            </a>
+            .
+          </p>
+          <p>
+            You are responsible for the videos you include in your ambiances.
+            Video owners may request removal of their content from the website
+            by contacting us at the address below.
           </p>
         </section>
 
@@ -146,10 +170,7 @@ export default function TermsOfService() {
           <p>
             For questions regarding these Terms of Service, please contact us
             at:{" "}
-            <a
-              className={styles.email_link}
-              href="mailto:support@ambiancemaker.com"
-            >
+            <a className={styles.link} href="mailto:support@ambiancemaker.com">
               support@ambiancemaker.com
             </a>
           </p>

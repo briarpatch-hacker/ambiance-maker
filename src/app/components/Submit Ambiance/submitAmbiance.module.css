@@ -84,7 +84,8 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.15rem;
-  color: var(--dark-grey-text);
+  color: var(---grey-text);
+  opacity: 0.75;
 }
 
 .ambiance_wrapper {

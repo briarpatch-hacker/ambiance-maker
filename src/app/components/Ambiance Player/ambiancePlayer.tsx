@@ -266,6 +266,11 @@ export default function AmbiancePlayer({
             }
 
             if (playerRefs.current[index]) {
+              // Re-entering the video that's still loaded (e.g. after clearing the link)
+              // would otherwise be skipped as a duplicate cue in onStateChange case 5
+              if (videoId && videoId === prevCuedVideoIdsRef.current[index]) {
+                prevCuedVideoIdsRef.current[index] = undefined;
+              }
               try {
                 playerRefs.current[index].stopVideo();
                 playerRefs.current[index].cueVideoById({
