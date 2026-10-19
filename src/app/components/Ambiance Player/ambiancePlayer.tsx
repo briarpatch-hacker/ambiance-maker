@@ -70,9 +70,7 @@ function createUrl({ src, startTime, endTime }: VideoData): string | false {
 
 // getVideoData().author is empty in the IFrame API, so fetch the channel
 // name from the oEmbed endpoint instead.
-async function fetchChannelName(
-  videoId: string,
-): Promise<string | undefined> {
+async function fetchChannelName(videoId: string): Promise<string | undefined> {
   try {
     const res = await fetch(
       `https://www.youtube.com/oembed?url=${encodeURIComponent(
@@ -277,6 +275,7 @@ export default function AmbiancePlayer({
               }
             }
           }
+
           // Checking if the url is valid
           if (!embedUrl) {
             // This resets the ambiance input
@@ -425,9 +424,14 @@ export default function AmbiancePlayer({
                       case 5: {
                         const cuedVideoId = player.getVideoData().video_id;
                         const currentTitle = player.getVideoData().title;
+                        // Ignore cues without a title; allow same-ID cues when the video is hidden
+                        // This is done to avoid ambInput collapse and re-expand when link is replaced
+                        // We also need the title condition so deleting and immediately loading the same link works
                         if (
                           cuedVideoId &&
-                          cuedVideoId !== prevCuedVideoIdsRef.current[index]
+                          currentTitle &&
+                          (cuedVideoId !== prevCuedVideoIdsRef.current[index] ||
+                            !videoDataRef.current[index].title)
                         ) {
                           prevCuedVideoIdsRef.current[index] = cuedVideoId;
                           prevStartTimesRef.current[index] = 0;
