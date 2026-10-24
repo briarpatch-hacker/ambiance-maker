@@ -16,6 +16,14 @@ for (let i = 25; i <= 200; i += 5) {
   values.push((i / 100).toFixed(2) + `x`);
 }
 
+// Typed digits with no decimal point get one after the first digit ("13" -> 1.3),
+// or in front if that would overshoot 2x ("25" -> .25, "5" -> .5)
+function parseSpeed(editValue: string): number {
+  if (editValue.includes(".")) return parseFloat(editValue);
+  const speed = parseFloat(editValue[0] + "." + editValue.slice(1));
+  return speed > 2 ? parseFloat("." + editValue) : speed;
+}
+
 export default function SpeedSlider({
   onValueChange,
   playbackSpeed,
@@ -25,8 +33,7 @@ export default function SpeedSlider({
   return (
     <div style={{ ...style }} className={styles.speed_slider}>
       <div className={styles.speedometer_wrapper}>
-        <Speedometer
-        />
+        <Speedometer />
       </div>
       <DiscreteSlider
         values={values}
@@ -40,6 +47,7 @@ export default function SpeedSlider({
         ariaLabel={"Video speed slider"}
         videoIndex={videoIndex}
         editable
+        parseEditValue={parseSpeed}
       />
     </div>
   );

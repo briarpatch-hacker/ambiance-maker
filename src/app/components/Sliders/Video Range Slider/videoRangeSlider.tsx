@@ -21,6 +21,20 @@ export function convertToTimecode(videoDuration: number) {
   return timecode;
 }
 
+// Converts seconds to a spoken form for screen readers (e.g. "1 hour 2 minutes 5 seconds")
+function convertToSpokenTime(totalSeconds: number) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  const seconds = totalSeconds % 60;
+  const parts: string[] = [];
+  if (hours) parts.push(`${hours} ${hours === 1 ? "hour" : "hours"}`);
+  if (minutes) parts.push(`${minutes} ${minutes === 1 ? "minute" : "minutes"}`);
+  if (seconds || !parts.length) {
+    parts.push(`${seconds} ${seconds === 1 ? "second" : "seconds"}`);
+  }
+  return parts.join(" ");
+}
+
 // Converts a raw digit buffer (grouped from the right) into total seconds,
 // letting over-60 minute/second chunks roll over (e.g. "13:99" -> 879s).
 function digitsToSeconds(digits: string): number {
@@ -439,9 +453,7 @@ export default function VideoRangeSlider({
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           onFocus={(e) => e.target.select()}
-          onChange={(e) =>
-            setEditValue(e.target.value.replace(/[^\d:]/g, ""))
-          }
+          onChange={(e) => setEditValue(e.target.value.replace(/[^\d:]/g, ""))}
           onBlur={() => commitEdit(thumb)}
           onKeyDown={(e) => {
             e.stopPropagation();
@@ -511,7 +523,7 @@ export default function VideoRangeSlider({
         aria-valuemin={0}
         aria-valuemax={end - 1}
         aria-valuenow={start}
-        aria-valuetext={start.toString()}
+        aria-valuetext={convertToSpokenTime(start)}
         ref={startThumbRef}
       >
         <div
@@ -532,7 +544,7 @@ export default function VideoRangeSlider({
         aria-valuemin={start + 1}
         aria-valuemax={videoDuration}
         aria-valuenow={end}
-        aria-valuetext={end.toString()}
+        aria-valuetext={convertToSpokenTime(end)}
         aria-label={ariaLabel}
         aria-keyshortcuts="Enter"
         onKeyDown={handleKeydownEnd}

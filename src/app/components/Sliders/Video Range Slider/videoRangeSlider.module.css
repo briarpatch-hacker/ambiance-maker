@@ -46,13 +46,13 @@
 
 .thumb_label {
   left: 50%;
-  transform: translateX(-50%) translateY(-160%);
+  transform: translateX(-50%) translateY(-2.8rem);
   color: var(--grey-text);
   font-size: 1.6rem;
 }
 
 .end .thumb_label {
-  transform: translateX(-50%) translateY(160%);
+  transform: translateX(-50%) translateY(2.95rem);
 }
 
 .text_wrapper {

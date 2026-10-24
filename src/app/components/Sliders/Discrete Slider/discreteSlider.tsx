@@ -12,6 +12,8 @@ interface DiscreteSliderProps {
   ariaLabel: string;
   videoIndex?: number;
   editable?: boolean;
+  // Optional override for how typed text becomes a number (defaults to parseFloat)
+  parseEditValue?: (editValue: string) => number;
   style?: React.CSSProperties;
 }
 
@@ -23,6 +25,7 @@ export default function DiscreteSlider({
   ariaLabel,
   videoIndex,
   editable,
+  parseEditValue = parseFloat,
   style,
 }: DiscreteSliderProps) {
   const [value, setValue] = useState(defaultValue);
@@ -198,7 +201,7 @@ export default function DiscreteSlider({
 
   // Finds the values[] index whose number is closest to a typed value
   function findNearestIndex(input: string): number | null {
-    const parsed = parseFloat(input);
+    const parsed = parseEditValue(input);
     if (Number.isNaN(parsed)) return null;
     let nearest = 0;
     let nearestDiff = Infinity;
@@ -212,10 +215,15 @@ export default function DiscreteSlider({
     return nearest;
   }
 
+  // Strips the unit off a value ("50%" -> "50", "1.00x" -> "1.00") for the input
+  function toEditValue(value: string) {
+    return value.replace(/[^\d.]/g, "");
+  }
+
   // Enters edit mode, seeding the input with the current numeric value
   function startEditing() {
     skipCommitRef.current = false;
-    setEditValue(String(parseFloat(value)));
+    setEditValue(toEditValue(value));
     setIsEditing(true);
   }
 
@@ -253,7 +261,7 @@ export default function DiscreteSlider({
     setFill((100 * nextIndex) / (values.length - 1));
     setValue(values[nextIndex]);
     onValueChange(values[nextIndex], videoIndex);
-    setEditValue(String(parseFloat(values[nextIndex])));
+    setEditValue(toEditValue(values[nextIndex]));
   }
 
   // On the editable label: a clean click opens the input, while a drag past a
@@ -383,9 +391,7 @@ export default function DiscreteSlider({
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
               onFocus={(e) => e.target.select()}
-              onChange={(e) =>
-                setEditValue(e.target.value.replace(/[^\d.]/g, ""))
-              }
+              onChange={(e) => setEditValue(toEditValue(e.target.value))}
               onBlur={commitEdit}
               onKeyDown={(e) => {
                 e.stopPropagation();

@@ -44,7 +44,7 @@
 
 .thumb_label {
   left: 50%;
-  transform: translateX(-50%) translateY(-152%);
+  transform: translateX(-50%) translateY(-2.7rem);
   color: var(--grey-text);
   font-size: 1.6rem;
 }

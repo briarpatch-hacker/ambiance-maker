@@ -47,7 +47,7 @@ export const categories: Record<string, any> = {
     Autumn: {},
     Winter: {},
     Halloween: {},
-    Yuletide: {},
+    Christmas: {},
     "Other Holidays": {},
   },
   Urban: {
@@ -575,7 +575,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   Seasonal: {
     id: 700,
     description: "The sounds of each season and the holidays that shape them.",
-    tags: ["spring", "autumn", "halloween", "yuletide"],
+    tags: ["spring", "autumn", "halloween", "christmas"],
     image: {
       src: "/images/categories/horror.jpg",
       alt: "",
@@ -649,11 +649,11 @@ export const categoryMeta: Record<string, CategoryMeta> = {
     },
     imageStyle: {},
   },
-  Yuletide: {
+  Christmas: {
     id: 760,
     description:
-      "Crackling fires, ringing bells, and carols on the night air. The winter holidays at their coziest.",
-    tags: ["festive", "carols", "fireside"],
+      "Crackling fires, ringing bells, and carols on the cold night air. The hush and warmth of the Christmas season.",
+    tags: ["festive", "carols", "fireside", "yuletide"],
     image: {
       src: "/images/categories/horror.jpg",
       alt: "",
@@ -665,8 +665,8 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   "Other Holidays": {
     id: 770,
     description:
-      "Harvest festivals, midsummer celebrations, and all the seasonal holidays that don't have their own category.",
-    tags: ["fireworks", "festivals", "celebration"],
+      "Solstice gatherings, harvest festivals, and midsummer celebrations. Every holiday that doesn't have its own category.",
+    tags: ["fireworks", "festivals", "celebration", "solstice"],
     image: {
       src: "/images/categories/horror.jpg",
       alt: "",

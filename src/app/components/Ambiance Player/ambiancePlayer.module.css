@@ -82,7 +82,6 @@
   row-gap: 0.6rem;
   column-gap: 0.4rem;
   width: 100%;
-  min-height: 33.6rem;
   min-height: 42rem;
   background-color: rgba(20, 20, 20);
   border-top-left-radius: 1.2rem;
@@ -145,6 +144,7 @@
 .video_wrapper {
   display: none;
   min-width: 32rem;
+  min-height: 20rem;
   min-width: 30%;
   max-width: 50%;
   flex: 1;
@@ -170,7 +170,7 @@
 }
 
 /* Mobile Styles */
-@media screen and (max-width: 700px) {
+@media screen and (max-width: 712px) {
   .video_wrapper {
     min-width: 40%;
   }
