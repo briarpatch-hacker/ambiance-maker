@@ -119,7 +119,14 @@ export default function AmbiancePlayer({
   const inDelayPauseRef = useRef<boolean[]>([]);
   // Single collection of intervals used to keep the iframe state in sync
   const videoIntervalRefs = useRef<(NodeJS.Timeout | null)[]>([]);
+  // Volume / speed most recently pushed to each player, and whether the player
+  // has echoed it back yet. getVolume() / getPlaybackRate() return cached values
+  // that lag behind setVolume() / setPlaybackRate(), so until the player echoes
+  // a push we ignore its reading instead of treating it as a user change
   const lastVolumeRef = useRef<(number | undefined)[]>([]);
+  const lastSpeedRef = useRef<(number | undefined)[]>([]);
+  const pendingVolumeRef = useRef<boolean[]>([]);
+  const pendingSpeedRef = useRef<boolean[]>([]);
   // Tracks which players are currently being initialized
   const initializingRef = useRef<boolean[]>([]);
 
@@ -133,6 +140,32 @@ export default function AmbiancePlayer({
   // Handles the play button that appears on a published video
   const [showPlayOverlay, setShowPlayOverlay] = useState(showInitialPlayButton);
   const [allPlayersReady, setAllPlayersReady] = useState(false);
+
+  // Returns volume / speed changes made inside the player itself (e.g. via its
+  // own controls) that should be adopted into videoData. Readings are ignored
+  // while a push is still pending so a stale value can't revert a user's edit
+  const getPlayerSideChanges = (player: any, index: number) => {
+    const changes: { volume?: number; playbackSpeed?: number } = {};
+    const vol = player.getVolume();
+    const lastVol = lastVolumeRef.current[index];
+    if (pendingVolumeRef.current[index]) {
+      if (vol === lastVol) pendingVolumeRef.current[index] = false;
+    } else if (lastVol !== undefined && vol !== lastVol) {
+      lastVolumeRef.current[index] = vol;
+      changes.volume = vol;
+    }
+    const speed = player.getPlaybackRate();
+    const lastSpeed = lastSpeedRef.current[index];
+    const speedMatches =
+      lastSpeed !== undefined && Math.abs(speed - lastSpeed) < 0.001;
+    if (pendingSpeedRef.current[index]) {
+      if (speedMatches) pendingSpeedRef.current[index] = false;
+    } else if (lastSpeed !== undefined && !speedMatches) {
+      lastSpeedRef.current[index] = speed;
+      changes.playbackSpeed = speed;
+    }
+    return changes;
+  };
 
   // Calls updateVideos when the videoData changes
   useEffect(() => {
@@ -183,8 +216,14 @@ export default function AmbiancePlayer({
           if (desiredVol !== lastVolumeRef.current[index]) {
             player.setVolume(desiredVol);
             lastVolumeRef.current[index] = desiredVol;
+            pendingVolumeRef.current[index] = true;
           }
-          player.setPlaybackRate(video.playbackSpeed || 1.0);
+          const desiredSpeed = video.playbackSpeed || 1.0;
+          if (desiredSpeed !== lastSpeedRef.current[index]) {
+            player.setPlaybackRate(desiredSpeed);
+            lastSpeedRef.current[index] = desiredSpeed;
+            pendingSpeedRef.current[index] = true;
+          }
           const currentTime = player.getCurrentTime();
           const prevStartTime = prevStartTimesRef.current[index];
           const playerState = player.getPlayerState();
@@ -257,6 +296,7 @@ export default function AmbiancePlayer({
             }
             clearDelayTimeout(index);
             lastVolumeRef.current[index] = undefined;
+            lastSpeedRef.current[index] = undefined;
 
             if (videoIntervalRefs.current[index]) {
               clearInterval(videoIntervalRefs.current[index]!);
@@ -363,8 +403,7 @@ export default function AmbiancePlayer({
 
                     videoIntervalRefs.current[index] = setInterval(() => {
                       const player = e.target;
-                      const vol = player.getVolume();
-                      const speed = player.getPlaybackRate();
+                      const changes = getPlayerSideChanges(player, index);
                       const rawTime = player.getCurrentTime();
                       const time =
                         rawTime === 0
@@ -375,15 +414,13 @@ export default function AmbiancePlayer({
                       const playing = state === 1;
                       const isDefinitiveState = state === 1 || state === 2;
                       if (
-                        vol !== vd.volume ||
-                        speed !== vd.playbackSpeed ||
+                        Object.keys(changes).length > 0 ||
                         time !== vd.currentTime ||
                         (isDefinitiveState && playing !== vd.isPlaying)
                       ) {
                         setVideoData &&
                           updateObjectArr(setVideoData, index, {
-                            volume: vol,
-                            playbackSpeed: speed,
+                            ...changes,
                             currentTime: time,
                             ...(isDefinitiveState && { isPlaying: playing }),
                           });
@@ -474,8 +511,10 @@ export default function AmbiancePlayer({
 
                           videoIntervalRefs.current[index] = setInterval(() => {
                             const player = e.target;
-                            const vol = player.getVolume();
-                            const speed = player.getPlaybackRate();
+                            const changes = getPlayerSideChanges(
+                              player,
+                              index,
+                            );
                             const rawTime = player.getCurrentTime();
                             const time =
                               rawTime === 0
@@ -487,15 +526,13 @@ export default function AmbiancePlayer({
                             const isDefinitiveState =
                               state === 1 || state === 2;
                             if (
-                              vol !== vd.volume ||
-                              speed !== vd.playbackSpeed ||
+                              Object.keys(changes).length > 0 ||
                               time !== vd.currentTime ||
                               (isDefinitiveState && playing !== vd.isPlaying)
                             ) {
                               setVideoData &&
                                 updateObjectArr(setVideoData, index, {
-                                  volume: vol,
-                                  playbackSpeed: speed,
+                                  ...changes,
                                   currentTime: time,
                                   ...(isDefinitiveState && {
                                     isPlaying: playing,
@@ -695,6 +732,8 @@ export default function AmbiancePlayer({
     player.unMute();
     if ((videoDataRef.current[index]?.volume ?? 100) === 0) {
       player.setVolume(0);
+      // Ignore the transient 5% the player may report before it echoes 0 back
+      pendingVolumeRef.current[index] = true;
     }
   }
 

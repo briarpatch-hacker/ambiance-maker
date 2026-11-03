@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import styles from "./ambianceCard.module.css";
 import TooltipLink from "@/app/components/Tooltip Link/tooltipLink";
@@ -104,6 +104,11 @@ export default function AmbianceCard({
 }: AmbianceCardProps) {
   const mouseMoved = useRef(false);
   const [tooltipEnabled, setTooltipEnabled] = useState(false);
+  const relativeUpdated = useMemo(
+    // Memoized so hover-driven re-renders don't recompute the label against a newer Date.now()
+    () => (dateUpdated ? formatRelativeTime(dateUpdated) : undefined),
+    [dateUpdated?.getTime()],
+  );
 
   useEffect(() => {
     const onMove = () => {
@@ -206,10 +211,8 @@ export default function AmbianceCard({
           ) : (
             <div className={styles.meta_wrapper}>
               <div className={styles.meta_row}>
-                {dateUpdated && (
-                  <div className={styles.date}>
-                    {formatRelativeTime(dateUpdated)}
-                  </div>
+                {relativeUpdated && (
+                  <div className={styles.date}>{relativeUpdated}</div>
                 )}
               </div>
             </div>

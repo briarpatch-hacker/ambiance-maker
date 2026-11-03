@@ -331,6 +331,8 @@ export default function AmbianceMaker({
           ? router.push(`/drafts/${data.ambiance.id}`)
           : router.replace(`/drafts/${data.ambiance.id}`);
       } else {
+        // Invalidate the client router cache so revisiting the draft shows the new data
+        if (!data.error) router.refresh();
         busy.current = false;
       }
       saveTimeoutRef.current && clearTimeout(saveTimeoutRef.current);
@@ -382,7 +384,8 @@ export default function AmbianceMaker({
   const handleSubmitSuccess = useCallback(() => {
     setStatus("submitted");
     setPublishButtonText("Categories");
-  }, []);
+    router.refresh();
+  }, [router]);
 
   // Withdraws a submitted ambiance back to draft
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -409,6 +412,7 @@ export default function AmbianceMaker({
         setWithdrawButtonText("Withdraw Submission");
         setPublishButtonText("Publish");
         withdrawn = true;
+        router.refresh();
       } else {
         setWithdrawButtonText(
           data.code === "NOT_FOUND" ? "Draft Not Found" : "Try Again",
