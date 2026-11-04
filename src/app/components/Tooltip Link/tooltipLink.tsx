@@ -98,6 +98,7 @@ export default function TooltipLink({
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const mountTime = useRef(performance.now());
   //Clears the timers
   useEffect(() => {
     return () => {
@@ -114,8 +115,17 @@ export default function TooltipLink({
     setClosing(false);
     setActive(true);
   }
+  // Window after mount during which a synthetic mousemove is ignored
+  const SETTLE_MS = 1000;
+  // Browsers fire a zero-movement mousemove when content lands under a stationary cursor.
+  // Ignored while the element is new (it just appeared), accepted once established (it was scrolled into).
+  function isGenuineMove(e: React.MouseEvent) {
+    const settled = performance.now() - mountTime.current > SETTLE_MS;
+    return settled || e.movementX !== 0 || e.movementY !== 0;
+  }
   // Resets the hover delay timer each time the mouse moves; tooltip appears once the mouse stops
-  function resetHoverDelay() {
+  function resetHoverDelay(e: React.MouseEvent) {
+    if (!isGenuineMove(e)) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     setClosing(false);
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
@@ -283,7 +293,14 @@ export default function TooltipLink({
     } else {
       setPosition(positionCopy);
     }
-  }, [direction, offset, shiftChildPercent, shiftRem, shiftTooltipPercent, containerRef]);
+  }, [
+    direction,
+    offset,
+    shiftChildPercent,
+    shiftRem,
+    shiftTooltipPercent,
+    containerRef,
+  ]);
 
   // Calculates the position of the tooltip when the window is resized
   const throttledCalculatePosition = useCallback(

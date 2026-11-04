@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { preload } from "react-dom";
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import Link from "next/link";
 import styles from "./sideMenu.module.css";
 import classNames from "classnames";
@@ -35,7 +35,17 @@ export default function SideMenu({
   // Preloads and caches login banner
   // Appears instantly when non-logged user hits "Login"
   if (!user) {
-    preload("/images/login-banner.jpg", { as: "image" });
+    const { props: bannerProps } = getImageProps({
+      src: "/images/login-banner.jpg",
+      width: 1080,
+      height: 360,
+      alt: "",
+    });
+    preload(bannerProps.src, {
+      as: "image",
+      imageSrcSet: bannerProps.srcSet,
+      imageSizes: bannerProps.sizes,
+    });
   }
 
   const [showContactModal, setShowContactModal] = useState(false);

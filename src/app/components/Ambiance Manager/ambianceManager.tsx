@@ -18,6 +18,7 @@ interface SelectionManagerProps {
   itemType: "draft" | "published";
   headlineText: string;
   containerRef: React.RefObject<HTMLElement | null>;
+  isLoading?: boolean;
 }
 
 export default function SelectionManager({
@@ -25,6 +26,7 @@ export default function SelectionManager({
   itemType,
   headlineText,
   containerRef,
+  isLoading = false,
 }: SelectionManagerProps) {
   const router = useRouter();
   const [items, setItems] = useState(itemsArr);
@@ -402,8 +404,10 @@ export default function SelectionManager({
             className={classNames(styles.entries_wrapper, {
               [styles.mobile]: entriesWidth <= 40,
               [styles.one_item]: items.length === 1,
+              [styles.loading]: isLoading,
             })}
             style={{ width: entriesWidth > 40 ? `${entriesWidth}rem` : `` }}
+            aria-busy={isLoading}
           >
             {items.map((item, index) => {
               return (

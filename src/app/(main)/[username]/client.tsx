@@ -84,6 +84,7 @@ function OwnerView({
   const [numPages, setNumPages] = useState(initialData?.numPages ?? 1);
   const [sort, setSort] = useState<SortOption>(initialData?.sort ?? "newest");
   const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(initialData != null);
 
   useEffect(() => {
@@ -95,6 +96,7 @@ function OwnerView({
       abortControllerRef.current?.abort();
       const controller = new AbortController();
       abortControllerRef.current = controller;
+      setIsLoading(true);
 
       try {
         const res = await fetch(
@@ -120,6 +122,9 @@ function OwnerView({
         if (err instanceof Error && err.name === "AbortError") return;
         setIsError(true);
         setIsInitialized(true);
+      } finally {
+        // An aborted request means a newer one is in flight; let that one clear the flag
+        if (abortControllerRef.current === controller) setIsLoading(false);
       }
     },
     [],
@@ -292,10 +297,14 @@ function OwnerView({
         <div className={styles.manager_wrapper}>
           <div className={styles.sort_menu_wrapper}>{sortMenu()}</div>
           <AmbianceManager
+            // Remounting per page/sort closes the delete menu and clears its
+            // index-based checkbox selection so it can't carry over to new items
+            key={`${page}-${sort}`}
             itemsArr={ambiances}
             containerRef={containerRef}
             headlineText={username}
             itemType="published"
+            isLoading={isLoading}
           />
           {paginationNav()}
         </div>

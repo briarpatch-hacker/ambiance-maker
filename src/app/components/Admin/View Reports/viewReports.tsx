@@ -23,6 +23,7 @@ export default function ViewReports() {
   const [items, setItems] = useState<ReportItem[]>([]);
   const [page, setPage] = useState(1);
   const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [numPages, setNumPages] = useState(0);
   const [sort, setSort] = useState<string>();
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -34,6 +35,7 @@ export default function ViewReports() {
   }, [searchParams]);
 
   async function getItems() {
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/admin/reports?${searchParams}`);
       const data = await res.json();
@@ -46,6 +48,8 @@ export default function ViewReports() {
       if (isError) setIsError(false);
     } catch {
       setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -216,7 +220,12 @@ export default function ViewReports() {
         {sortOptions()}
         {sizeOptions()}
       </div>
-      <div className={styles.reports_list}>
+      <div
+        className={classNames(styles.reports_list, {
+          [styles.loading]: isLoading,
+        })}
+        aria-busy={isLoading}
+      >
         {items.map((item) => (
           <div
             className={styles.report_row}

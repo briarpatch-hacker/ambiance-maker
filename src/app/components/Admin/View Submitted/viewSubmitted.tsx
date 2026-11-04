@@ -20,6 +20,7 @@ export default function ViewSubmitted({
   const [items, setItems] = useState<AmbianceCardProps[]>([]);
   const [page, setPage] = useState(1);
   const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [numPages, setNumPages] = useState(0);
   const [sort, setSort] = useState();
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -32,6 +33,7 @@ export default function ViewSubmitted({
 
   //Fetches items from the backend
   async function getItems() {
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/admin/submitted?${searchParams}`);
       const data = await res.json();
@@ -44,6 +46,8 @@ export default function ViewSubmitted({
       if (isError) setIsError(false);
     } catch (error) {
       setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -281,14 +285,16 @@ export default function ViewSubmitted({
       <div
         className={classNames(styles.entries_wrapper, {
           [styles.mobile]: entriesWidth <= 40,
+          [styles.loading]: isLoading,
         })}
         style={{ width: entriesWidth > 40 ? `${entriesWidth}rem` : `` }}
+        aria-busy={isLoading}
       >
         {items.map((item, index) => {
           return (
             <div
               className={styles.entry_container}
-              key={`entry-${index}`}
+              key={`entry-${page}-${sort}-${pageSize}-${index}`}
               ref={(el) => {
                 if (entryContainersRef.current) {
                   entryContainersRef.current[index] = el;
@@ -310,7 +316,6 @@ export default function ViewSubmitted({
                 datePublished={new Date(item.datePublished as Date)}
                 description={item.description}
                 mode={entriesWidth <= 40 ? "horizontal" : "vertical"}
-                key={index}
               />
             </div>
           );

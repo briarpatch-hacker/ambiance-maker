@@ -23,6 +23,7 @@ export default function Pagination({
   const [items, setItems] = useState<AmbianceCardProps[]>([]);
   const [page, setPage] = useState(1);
   const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [numPages, setNumPages] = useState(0);
   const [sort, setSort] = useState();
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -31,6 +32,7 @@ export default function Pagination({
 
   //Fetches items from the backend
   const getItems = useCallback(async () => {
+    setIsLoading(true);
     try {
       const storedSize = localStorage.getItem("preferredPageSize");
       const url =
@@ -49,6 +51,8 @@ export default function Pagination({
       hasFetched.current = true;
     } catch (error) {
       setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
   }, [searchParams, collection]);
 
@@ -148,9 +152,14 @@ export default function Pagination({
     const pageSizeButton = (text: string, newPageSize: number) => {
       let params: string[] = [];
 
+      // Preserve the item offset rather than the page number so the first
+      // item currently visible stays on screen after the size change
+      const firstItemIndex = (page - 1) * pageSize;
+      const newPage = Math.floor(firstItemIndex / newPageSize) + 1;
+
       if (sort !== DEFAULT_SORT) params.push(`sort=${sort}`);
       params.push(`page_size=${newPageSize}`);
-      if (page !== 1) params.push(`page=${page}`);
+      if (newPage !== 1) params.push(`page=${newPage}`);
 
       const queryString = params.toString() ? `?${params.join("&")}` : "";
       return (
@@ -311,14 +320,16 @@ export default function Pagination({
         className={classNames(styles.entries_wrapper, {
           [styles.mobile]: entriesWidth <= 40,
           [styles.one_item]: items.length === 1,
+          [styles.loading]: isLoading,
         })}
         style={{ width: entriesWidth > 40 ? `${entriesWidth}rem` : `` }}
+        aria-busy={isLoading}
       >
         {items.map((item, index) => {
           return (
             <div
               className={styles.entry_container}
-              key={`entry-${index}`}
+              key={`entry-${page}-${sort}-${pageSize}-${index}`}
               ref={(el) => {
                 if (entryContainersRef.current) {
                   entryContainersRef.current[index] = el;
@@ -339,7 +350,6 @@ export default function Pagination({
                 datePublished={new Date(item.datePublished as Date)}
                 description={item.description}
                 mode={entriesWidth <= 40 ? "horizontal" : "vertical"}
-                key={index}
               />
             </div>
           );

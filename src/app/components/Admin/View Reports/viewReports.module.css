@@ -127,6 +127,12 @@
   row-gap: 0.4rem;
 }
 
+.reports_list.loading {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in;
+}
+
 .report_row {
   display: flex;
   align-items: center;

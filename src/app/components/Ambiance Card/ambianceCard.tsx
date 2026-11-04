@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import styles from "./ambianceCard.module.css";
 import TooltipLink from "@/app/components/Tooltip Link/tooltipLink";
@@ -102,21 +102,11 @@ export default function AmbianceCard({
   style,
   banner,
 }: AmbianceCardProps) {
-  const mouseMoved = useRef(false);
-  const [tooltipEnabled, setTooltipEnabled] = useState(false);
   const relativeUpdated = useMemo(
     // Memoized so hover-driven re-renders don't recompute the label against a newer Date.now()
     () => (dateUpdated ? formatRelativeTime(dateUpdated) : undefined),
     [dateUpdated?.getTime()],
   );
-
-  useEffect(() => {
-    const onMove = () => {
-      mouseMoved.current = true;
-    };
-    window.addEventListener("pointermove", onMove);
-    return () => window.removeEventListener("pointermove", onMove);
-  }, []);
 
   return (
     <div
@@ -124,20 +114,15 @@ export default function AmbianceCard({
         [styles.vertical]: mode === "vertical",
         [styles.horizontal]: mode === "horizontal",
       })}
-      onPointerEnter={() => {
-        if (mouseMoved.current) setTooltipEnabled(true);
-      }}
     >
       <TooltipLink
         href={`/${linkTo === "ambiance" ? `ambiance` : `drafts`}/${id}`}
         target={linkTarget}
         direction="bottom"
         tooltip={
-          tooltipEnabled && description ? (
-            <Description description={description} />
-          ) : undefined
+          description ? <Description description={description} /> : undefined
         }
-        tooltipId={tooltipEnabled && description ? "description" : ""}
+        tooltipId={description ? "description" : ""}
         offset={0.0}
         containerRef={containerRef}
         delay={800}

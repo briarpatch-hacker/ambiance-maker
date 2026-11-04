@@ -238,6 +238,12 @@
   margin-top: 1.8rem;
 }
 
+.entries_wrapper.loading {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in;
+}
+
 .entries_wrapper.mobile {
   flex-direction: column;
   flex-wrap: unset;
