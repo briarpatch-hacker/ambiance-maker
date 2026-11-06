@@ -2,6 +2,22 @@ import { createAdminClient } from "@/app/lib/supabase/admin";
 import { createClient } from "@/app/lib/supabase/server";
 import { cookies } from "next/headers";
 
+/**
+ * Bumps sessions.last_active at most once per UTC calendar day.
+ * The nightly snapshot (snapshot_daily_metrics) buckets by calendar day, so
+ * throttling on a rolling 24h would skip days where visits are < 24h apart.
+ */
+function touchSession(sessionId: string, lastActive: string) {
+  const today = new Date().toISOString().slice(0, 10);
+  const lastActiveDay = new Date(lastActive).toISOString().slice(0, 10);
+  if (lastActiveDay === today) return;
+  createAdminClient()
+    .from("sessions")
+    .update({ last_active: new Date().toISOString() })
+    .eq("session_id", sessionId)
+    .then(() => {});
+}
+
 export async function getCurrentUser() {
   try {
     const cookieStore = await cookies();
@@ -18,14 +34,7 @@ export async function getCurrentUser() {
 
     if (sessionError || !session) return null;
 
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    if (session.last_active < oneDayAgo) {
-      createAdminClient()
-        .from("sessions")
-        .update({ last_active: new Date().toISOString() })
-        .eq("session_id", sessionId)
-        .then(() => {});
-    }
+    touchSession(sessionId, session.last_active);
 
     const { data: user, error } = await supabase
       .from("users")
@@ -60,14 +69,7 @@ export async function getUserId(): Promise<string | null> {
 
     if (error || !session) return null;
 
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    if (session.last_active < oneDayAgo) {
-      createAdminClient()
-        .from("sessions")
-        .update({ last_active: new Date().toISOString() })
-        .eq("session_id", sessionId)
-        .then(() => {});
-    }
+    touchSession(sessionId, session.last_active);
 
     return session.user_id;
   } catch {

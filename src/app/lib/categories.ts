@@ -777,7 +777,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   Ethereal: {
     id: 1100,
     description:
-      "Temple bells, abbey choirs, and a lingering  carrying a sense of the sacred and transcendent.",
+      "Temple bells, abbey choirs, and a lingering reverb carrying a sense of the sacred and transcendent.",
     tags: ["mystical", "transcendent", "spiritual"],
     image: {
       src: "/images/categories/horror.jpg",

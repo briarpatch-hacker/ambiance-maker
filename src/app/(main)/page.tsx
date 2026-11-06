@@ -1,6 +1,7 @@
 import Hero from "@/app/components/Hero/hero";
 import AmbianceMaker from "@/app/components/Ambiance Maker/ambianceMaker";
 import Dashboard from "@/app/components/Dashboard/dashboard";
+import PageView from "@/app/components/Page View/pageView";
 import styles from "./page.module.css";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { createClient } from "@/app/lib/supabase/server";
@@ -9,15 +10,15 @@ import { cookies } from "next/headers";
 const DASHBOARD_LIMIT = 12;
 
 export default async function Page() {
-  const today = new Date().toISOString().slice(0, 10);
-  createAdminClient().rpc("increment_page_view", { p_page: "home", p_date: today });
-
+  // Page views are tracked client-side (<PageView />) so link prefetches
+  // and bot crawls of this server component don't inflate the count.
   const cookieStore = await cookies();
   const sessionId = cookieStore.get("sessionId")?.value;
 
   if (!sessionId) {
     return (
       <div className={styles.homepage}>
+        <PageView page="home" />
         <Hero />
         <div id="ambiance-maker" className={styles.ambiance_maker_wrapper}>
           <AmbianceMaker mode="create" user={null} />
@@ -39,6 +40,7 @@ export default async function Page() {
   if (!session?.user_id) {
     return (
       <div className={styles.homepage}>
+        <PageView page="home" />
         <Hero />
         <div id="ambiance-maker" className={styles.ambiance_maker_wrapper}>
           <AmbianceMaker mode="create" user={null} />
@@ -75,6 +77,7 @@ export default async function Page() {
   if (!user) {
     return (
       <div className={styles.homepage}>
+        <PageView page="home" />
         <Hero />
         <div className={styles.ambiance_maker_wrapper}>
           <AmbianceMaker mode="create" user={null} />
@@ -103,6 +106,7 @@ export default async function Page() {
 
   return (
     <div className={styles.homepage}>
+      <PageView page="home" />
       {drafts.length === 0 && <Hero />}
       <Dashboard
         user={user}

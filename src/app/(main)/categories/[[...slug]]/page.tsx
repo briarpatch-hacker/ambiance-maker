@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import CategoriesPage from "@/app/components/Categories/categories";
+import PageView from "@/app/components/Page View/pageView";
 import { categories, categoryMeta } from "@/app/lib/categories";
 
 interface PageProps {
@@ -51,5 +52,10 @@ export async function generateMetadata({
 
 export default async function Page({ params }: PageProps) {
   const { slug } = await params;
-  return <CategoriesPage slug={slug} />;
+  return (
+    <>
+      <PageView page="categories" />
+      <CategoriesPage slug={slug} />
+    </>
+  );
 }

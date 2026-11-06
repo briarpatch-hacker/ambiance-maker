@@ -1,99 +1,95 @@
 import cron from "node-cron";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 
-export default function startCronJobs() {
-  // Weekly cleanup: delete sessions inactive for 90+ days
-  // Runs every Sunday at 3:00 AM
-  cron.schedule("0 3 * * 0", async () => {
-    console.log("[cron] Running stale session cleanup...");
-    try {
-      const supabase = createAdminClient();
-      const cutoff = new Date(
-        Date.now() - 90 * 24 * 60 * 60 * 1000,
-      ).toISOString();
-      const { error, count } = await supabase
-        .from("sessions")
-        .delete({ count: "exact" })
-        .lt("last_active", cutoff);
+const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Registers a job that deletes rows from `table` where `column` is older than
+ * `days`. `dateOnly` formats the cutoff as YYYY-MM-DD for DATE columns.
+ *
+ * Analytics logs are pruned daily rather than weekly: node-cron runs in-process
+ * and does not catch up after a restart, so a missed daily run costs one day of
+ * bloat instead of seven.
+ */
+function schedulePrune(
+  schedule: string,
+  label: string,
+  table: string,
+  column: string,
+  days: number,
+  dateOnly = false,
+) {
+  cron.schedule(schedule, async () => {
+    console.log(`[cron] Running ${label} cleanup...`);
+    try {
+      const iso = new Date(Date.now() - days * DAY_MS).toISOString();
+      const cutoff = dateOnly ? iso.slice(0, 10) : iso;
+      const { error, count } = await createAdminClient()
+        .from(table)
+        .delete({ count: "exact" })
+        .lt(column, cutoff);
       if (error) {
-        console.error("[cron] Session cleanup failed:", error);
+        console.error(`[cron] ${label} cleanup failed:`, error);
       } else {
         console.log(
-          `[cron] Session cleanup complete. Removed ${count ?? 0} stale sessions.`,
+          `[cron] ${label} cleanup complete. Removed ${count ?? 0} entries.`,
         );
       }
     } catch (err) {
-      console.error("[cron] Session cleanup unexpected error:", err);
+      console.error(`[cron] ${label} cleanup unexpected error:`, err);
     }
   });
+}
 
-  // Daily at 00:05: snapshot distinct active users for the previous day
+export default function startCronJobs() {
+  // Daily at 00:05: snapshot yesterday's distinct visitors and signed-in users
   cron.schedule("5 0 * * *", async () => {
-    console.log("[cron] Running DAU snapshot...");
+    console.log("[cron] Running daily metrics snapshot...");
     try {
       const supabase = createAdminClient();
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      const yesterday = new Date(Date.now() - DAY_MS)
         .toISOString()
         .slice(0, 10);
-      const { error } = await supabase.rpc("snapshot_daily_active_users", {
+      const { data, error } = await supabase.rpc("snapshot_daily_metrics", {
         p_date: yesterday,
       });
       if (error) {
-        console.error("[cron] DAU snapshot failed:", error);
+        console.error("[cron] Daily metrics snapshot failed:", error);
       } else {
-        console.log(`[cron] DAU snapshot complete for ${yesterday}.`);
-      }
-    } catch (err) {
-      console.error("[cron] DAU snapshot unexpected error:", err);
-    }
-  });
-
-  // Weekly on Sunday at 03:30: prune ambiance_view_log entries older than 7 days
-  cron.schedule("30 3 * * 0", async () => {
-    console.log("[cron] Running ambiance view log cleanup...");
-    try {
-      const supabase = createAdminClient();
-      const cutoff = new Date(
-        Date.now() - 7 * 24 * 60 * 60 * 1000,
-      ).toISOString();
-      const { error, count } = await supabase
-        .from("ambiance_view_log")
-        .delete({ count: "exact" })
-        .lt("last_viewed", cutoff);
-      if (error) {
-        console.error("[cron] View log cleanup failed:", error);
-      } else {
+        const row = Array.isArray(data) ? data[0] : data;
         console.log(
-          `[cron] View log cleanup complete. Removed ${count ?? 0} entries.`,
+          `[cron] Daily metrics snapshot complete for ${yesterday}: ` +
+            `${row?.daily_visitors ?? "?"} visitors, ${row?.daily_active_users ?? "?"} signed-in.`,
         );
       }
     } catch (err) {
-      console.error("[cron] View log cleanup unexpected error:", err);
+      console.error("[cron] Daily metrics snapshot unexpected error:", err);
     }
   });
 
-  // Weekly on Sunday at 04:00: prune share_hits entries with last_seen older than 30 days
-  cron.schedule("0 4 * * 0", async () => {
-    console.log("[cron] Running share_hits cleanup...");
-    try {
-      const supabase = createAdminClient();
-      const cutoff = new Date(
-        Date.now() - 30 * 24 * 60 * 60 * 1000,
-      ).toISOString();
-      const { error, count } = await supabase
-        .from("share_hits")
-        .delete({ count: "exact" })
-        .lt("last_seen", cutoff);
-      if (error) {
-        console.error("[cron] share_hits cleanup failed:", error);
-      } else {
-        console.log(
-          `[cron] share_hits cleanup complete. Removed ${count ?? 0} entries.`,
-        );
-      }
-    } catch (err) {
-      console.error("[cron] share_hits cleanup unexpected error:", err);
-    }
-  });
+  // Daily at 00:10: page_view_log dedup is per calendar day and the snapshot
+  // above only reads yesterday, so anything older is never consulted again
+  schedulePrune(
+    "10 0 * * *",
+    "page_view_log",
+    "page_view_log",
+    "date",
+    2,
+    true,
+  );
+
+  // Daily at 00:15: must match the dedup window in record_ambiance_view (3 days)
+  schedulePrune(
+    "15 0 * * *",
+    "ambiance_view_log",
+    "ambiance_view_log",
+    "last_viewed",
+    3,
+  );
+
+  // Daily at 00:20: drop share links not visited in 30 days
+  schedulePrune("20 0 * * *", "share_hits", "share_hits", "last_seen", 30);
+
+  // Weekly on Sunday at 03:00: delete sessions inactive for 90+ days
+  schedulePrune("0 3 * * 0", "stale session", "sessions", "last_active", 90);
 }
