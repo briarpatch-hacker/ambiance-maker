@@ -49,7 +49,6 @@ const createVideoEntry = (): VideoData => ({
   endTime: undefined,
   volume: undefined,
   playbackSpeed: undefined,
-  ready: false,
 });
 
 export default function Page() {

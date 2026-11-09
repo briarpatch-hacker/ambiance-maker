@@ -1,5 +1,11 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import styles from "./ambianceInput.module.css";
 import classNames from "classnames";
 import VideoSlider from "@/app/components/Sliders/Video Range Slider/videoRangeSlider";
@@ -38,7 +44,7 @@ interface AmbianceInputProps {
   style?: React.CSSProperties;
 }
 
-export default function AmbianceInput({
+export default React.memo(function AmbianceInput({
   videoTitle,
   videoChannel,
   videoDuration,
@@ -79,16 +85,20 @@ export default function AmbianceInput({
   }
 
   // Uses onLinkChange to show a video once user stops typing
-  const validateLink = useCallback(
-    debounce((link: string) => {
-      onLinkChange(link, videoIndex);
-    }, 300),
+  const validateLink = useMemo(
+    () =>
+      debounce((link: string) => {
+        onLinkChange(link, videoIndex);
+      }, 300),
     [],
   );
 
   useEffect(() => {
     validateLink(inputData.link);
   }, [inputData.link]);
+
+  // Drops any pending validation when the input unmounts
+  useEffect(() => () => validateLink.cancel(), [validateLink]);
 
   // Used to manage the delay input
   const delayInputRef = useRef<HTMLInputElement | null>(null);
@@ -276,4 +286,4 @@ export default function AmbianceInput({
       )}
     </div>
   );
-}
+});

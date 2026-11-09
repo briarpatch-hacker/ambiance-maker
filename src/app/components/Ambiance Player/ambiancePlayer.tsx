@@ -1,5 +1,11 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useImperativeHandle,
+} from "react";
 import styles from "./ambiancePlayer.module.css";
 import PlayIcon from "@/app/components/Icons/play";
 import PauseIcon from "@/app/components/Icons/pause";
@@ -12,6 +18,13 @@ import { updateObjectArr } from "@/app/lib/setStateFunctions";
 import { FullScreen, useFullScreenHandle } from "react-full-screen";
 import FullscreenOpen from "@/app/components/Icons/fullscreen_open";
 import FullscreenClose from "@/app/components/Icons/fullscreen_close";
+import type {
+  VideoData,
+  PlaybackState,
+} from "@/app/components/Ambiance Maker/ambianceMaker";
+
+// Re-exported so existing imports of VideoData from the player keep working
+export type { VideoData, PlaybackState };
 
 // YouTube API type declarations
 declare global {
@@ -24,32 +37,72 @@ declare global {
 interface AmbiancePlayerProps {
   videoData: VideoData[];
   setVideoData?: React.Dispatch<React.SetStateAction<VideoData[]>>;
+  // Receives currentTime / isPlaying from the 600ms poll
+  setPlayback?: React.Dispatch<React.SetStateAction<PlaybackState[]>>;
   initialVideoData?: VideoData[];
   showInitialPlayButton?: boolean;
   style?: React.CSSProperties;
+  ref?: React.Ref<AmbiancePlayerHandle>;
 }
 
-export interface VideoData {
-  src?: string;
-  linkError?: string;
-  title?: string;
-  channel?: string;
-  duration?: number;
-  startTime?: number;
-  endTime?: number;
-  currentTime?: number;
-  volume?: number;
-  playbackSpeed?: number;
-  loopDelay?: number;
-  ready?: boolean;
-  isPlaying?: boolean;
-  seekTo?: number;
-  pauseVideo?: boolean;
+// Per-video controls the parent can call directly instead of going through state
+export interface AmbiancePlayerHandle {
+  playPause: (index: number) => void;
+  rewind: (index: number) => void;
+  jumpBack: (index: number) => void;
+  jumpForward: (index: number) => void;
 }
 
-// Creates an embed URL using VideoData
-function createUrl({ src, startTime, endTime }: VideoData): string | false {
-  // Looks for a match on /watch?v=id , then /shorts/id , then /embed/id
+// Everything the player tracks about a single video slot
+interface PlayerSlot {
+  // The YT.Player instance, or null if it hasn't been created / failed to load
+  player: any;
+  // Previous startTime so we can reset the video when the user changes it
+  prevStartTime: number | undefined;
+  // Previous src so we can detect when the user swaps the link
+  prevSrc: string | undefined;
+  // The videoId most recently cued, so we can detect when a new video enters the player
+  // This avoids an edge case when old / new video have the same title
+  cuedVideoId: string | undefined;
+  // Fires at the video's endTime to loop it
+  loopTimeout: NodeJS.Timeout | null;
+  // Fires at the end of a loop delay to resume the video
+  delayTimeout: NodeJS.Timeout | null;
+  // Indicates if vid is in a delay phase after a full loop
+  // Used to clear the loop delay timer when appropriate
+  inDelayPause: boolean;
+  // 600ms poll that keeps videoData in sync with the iframe
+  syncInterval: NodeJS.Timeout | null;
+  // Volume / speed most recently pushed to the player, and whether the player
+  // has echoed it back yet. getVolume() / getPlaybackRate() return cached values
+  // that lag behind setVolume() / setPlaybackRate(), so until the player echoes
+  // a push we ignore its reading instead of treating it as a user change
+  lastVolume: number | undefined;
+  lastSpeed: number | undefined;
+  pendingVolume: boolean;
+  pendingSpeed: boolean;
+  // undefined = creation never attempted, true = in progress, false = finished
+  initializing: boolean | undefined;
+}
+
+const createSlot = (): PlayerSlot => ({
+  player: null,
+  prevStartTime: undefined,
+  prevSrc: undefined,
+  cuedVideoId: undefined,
+  loopTimeout: null,
+  delayTimeout: null,
+  inDelayPause: false,
+  syncInterval: null,
+  lastVolume: undefined,
+  lastSpeed: undefined,
+  pendingVolume: false,
+  pendingSpeed: false,
+  initializing: undefined,
+});
+
+// Pulls the video id out of a /watch?v=id , /shorts/id , or /embed/id link
+export function extractYouTubeId(src?: string): string | undefined {
   const match =
     src?.match(
       /(?:https?:\/\/)?(?:[\w-]+\.)*youtube\.com\/watch\?v=([\w-]+)/i,
@@ -59,24 +112,27 @@ function createUrl({ src, startTime, endTime }: VideoData): string | false {
     ) ||
     src?.match(/(?:https?:\/\/)?(?:[\w-]+\.)*youtube\.com\/embed\/([\w-]+)/i) ||
     null;
-  if (!match) return false;
-  const videoId = match[1];
-  const params = new URLSearchParams();
-  if (startTime) params.set("start", startTime.toString());
-  if (endTime) params.set("end", endTime.toString());
-  params.set("enablejsapi", "1");
-  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+  return match ? match[1] : undefined;
 }
+
+// Fields reset whenever a video is removed, replaced, or fails to load
+const clearedMeta = (linkError?: string): Partial<VideoData> => ({
+  title: undefined,
+  channel: undefined,
+  duration: undefined,
+  linkError,
+});
+
+const oEmbedUrl = (videoId: string) =>
+  `https://www.youtube.com/oembed?url=${encodeURIComponent(
+    `https://www.youtube.com/watch?v=${videoId}`,
+  )}&format=json`;
 
 // getVideoData().author is empty in the IFrame API, so fetch the channel
 // name from the oEmbed endpoint instead.
 async function fetchChannelName(videoId: string): Promise<string | undefined> {
   try {
-    const res = await fetch(
-      `https://www.youtube.com/oembed?url=${encodeURIComponent(
-        `https://www.youtube.com/watch?v=${videoId}`,
-      )}&format=json`,
-    );
+    const res = await fetch(oEmbedUrl(videoId));
     if (!res.ok) return undefined;
     const data = await res.json();
     return typeof data.author_name === "string" && data.author_name
@@ -87,48 +143,54 @@ async function fetchChannelName(videoId: string): Promise<string | undefined> {
   }
 }
 
-export default function AmbiancePlayer({
+// Loads the YouTube IFrame API once per page and resolves when YT.Player is usable.
+// Shared across every player instance so remounts don't re-inject or re-hook the API
+let youtubeApiPromise: Promise<void> | null = null;
+function loadYouTubeApi(): Promise<void> {
+  if (window.YT?.Player) return Promise.resolve();
+  if (!youtubeApiPromise) {
+    youtubeApiPromise = new Promise<void>((resolve) => {
+      // Polls as a fallback in case the ready callback never fires
+      const poll = setInterval(() => {
+        if (window.YT?.Player) {
+          clearInterval(poll);
+          resolve();
+        }
+      }, 100);
+      window.onYouTubeIframeAPIReady = () => {
+        clearInterval(poll);
+        resolve();
+      };
+      if (!window.YT) {
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName("script")[0];
+        firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+      }
+    });
+  }
+  return youtubeApiPromise;
+}
+
+export default React.memo(function AmbiancePlayer({
   videoData,
   initialVideoData,
   setVideoData,
+  setPlayback,
   showInitialPlayButton = false,
   style,
+  ref,
 }: AmbiancePlayerProps) {
-  // Setting up the ambiance player / video players
-  const playerRefs = useRef<any[]>([]);
+  // Per-video player state, one slot per index in videoData
+  const slotsRef = useRef<PlayerSlot[]>([]);
   const videoDataRef = useRef<VideoData[]>([]);
   videoDataRef.current = videoData;
-
-  // Tracks previous startTimes so we can reset the video when user changes it
-  const prevStartTimesRef = useRef<(number | undefined)[]>([]);
-  // Tracks previous video link / src so we can destroy and recreate the video when user changes it
-  const prevLinksRef = useRef<(string | undefined)[]>([]);
-  // Tracks the videoId so we can detect when a new video enters the player
-  // This avoids an edge case when old / new video have the same title
-  const prevCuedVideoIdsRef = useRef<(string | undefined)[]>([]);
+  // Mirror of what we've pushed through setPlayback, so the poll can dedupe
+  // and the player can read playhead state without subscribing to it
+  const playbackRef = useRef<PlaybackState[]>([]);
 
   // Player controls
   const [muted, setMuted] = useState(false);
-
-  // Timeouts for controlling looping videos
-  const timeoutRefs = useRef<(NodeJS.Timeout | null)[]>([]);
-  // Timeouts for the loop delays
-  const delayTimeoutRefs = useRef<(NodeJS.Timeout | null)[]>([]);
-  // Indiciates if vid is in a delay phase after a full loop
-  // Used to clear the loop delayer timer when appropriate
-  const inDelayPauseRef = useRef<boolean[]>([]);
-  // Single collection of intervals used to keep the iframe state in sync
-  const videoIntervalRefs = useRef<(NodeJS.Timeout | null)[]>([]);
-  // Volume / speed most recently pushed to each player, and whether the player
-  // has echoed it back yet. getVolume() / getPlaybackRate() return cached values
-  // that lag behind setVolume() / setPlaybackRate(), so until the player echoes
-  // a push we ignore its reading instead of treating it as a user change
-  const lastVolumeRef = useRef<(number | undefined)[]>([]);
-  const lastSpeedRef = useRef<(number | undefined)[]>([]);
-  const pendingVolumeRef = useRef<boolean[]>([]);
-  const pendingSpeedRef = useRef<boolean[]>([]);
-  // Tracks which players are currently being initialized
-  const initializingRef = useRef<boolean[]>([]);
 
   // Handles fullscreen mode on the ambiance player
   const fullscreenHandle = useFullScreenHandle();
@@ -141,586 +203,513 @@ export default function AmbiancePlayer({
   const [showPlayOverlay, setShowPlayOverlay] = useState(showInitialPlayButton);
   const [allPlayersReady, setAllPlayersReady] = useState(false);
 
+  // True once the YouTube IFrame API has loaded
+  const [apiReady, setApiReady] = useState(false);
+
+  // Makes sure there is a slot for every video index
+  const ensureSlots = (count: number) => {
+    const slots = slotsRef.current;
+    while (slots.length < count) slots.push(createSlot());
+  };
+
+  // Records playhead state locally and pushes it to the parent
+  const writePlayback = (index: number, updates: PlaybackState) => {
+    playbackRef.current[index] = { ...playbackRef.current[index], ...updates };
+    setPlayback && updateObjectArr(setPlayback, index, updates);
+  };
+
+  // Runs fn for every slot that currently has a live player
+  const forEachPlayer = (
+    fn: (player: any, index: number, slot: PlayerSlot) => void,
+  ) => {
+    slotsRef.current.forEach((slot, index) => {
+      if (slot.player) fn(slot.player, index, slot);
+    });
+  };
+
+  const isAnyOtherPlaying = (index: number) =>
+    slotsRef.current.some(
+      (slot, i) =>
+        slot.player && i !== index && slot.player.getPlayerState() === 1,
+    );
+
+  const clearLoopTimeout = (slot: PlayerSlot) => {
+    if (slot.loopTimeout) {
+      clearTimeout(slot.loopTimeout);
+      slot.loopTimeout = null;
+    }
+  };
+
+  const clearSyncInterval = (slot: PlayerSlot) => {
+    if (slot.syncInterval) {
+      clearInterval(slot.syncInterval);
+      slot.syncInterval = null;
+    }
+  };
+
+  // Clears the pending loop delay timeout for a video
+  const clearDelayTimeout = useCallback((index: number) => {
+    const slot = slotsRef.current[index];
+    if (!slot) return;
+    slot.inDelayPause = false;
+    if (slot.delayTimeout) {
+      clearTimeout(slot.delayTimeout);
+      slot.delayTimeout = null;
+    }
+  }, []);
+
+  // Marks a slot's player creation as finished, and flags all players ready
+  // once no slot is still initializing
+  const markReady = (index: number) => {
+    slotsRef.current[index].initializing = false;
+    if (slotsRef.current.every((slot) => slot.initializing !== true)) {
+      setAllPlayersReady(true);
+    }
+  };
+
   // Returns volume / speed changes made inside the player itself (e.g. via its
   // own controls) that should be adopted into videoData. Readings are ignored
   // while a push is still pending so a stale value can't revert a user's edit
-  const getPlayerSideChanges = (player: any, index: number) => {
+  const getPlayerSideChanges = (player: any, slot: PlayerSlot) => {
     const changes: { volume?: number; playbackSpeed?: number } = {};
     const vol = player.getVolume();
-    const lastVol = lastVolumeRef.current[index];
-    if (pendingVolumeRef.current[index]) {
-      if (vol === lastVol) pendingVolumeRef.current[index] = false;
-    } else if (lastVol !== undefined && vol !== lastVol) {
-      lastVolumeRef.current[index] = vol;
+    if (slot.pendingVolume) {
+      if (vol === slot.lastVolume) slot.pendingVolume = false;
+    } else if (slot.lastVolume !== undefined && vol !== slot.lastVolume) {
+      slot.lastVolume = vol;
       changes.volume = vol;
     }
     const speed = player.getPlaybackRate();
-    const lastSpeed = lastSpeedRef.current[index];
     const speedMatches =
-      lastSpeed !== undefined && Math.abs(speed - lastSpeed) < 0.001;
-    if (pendingSpeedRef.current[index]) {
-      if (speedMatches) pendingSpeedRef.current[index] = false;
-    } else if (lastSpeed !== undefined && !speedMatches) {
-      lastSpeedRef.current[index] = speed;
+      slot.lastSpeed !== undefined && Math.abs(speed - slot.lastSpeed) < 0.001;
+    if (slot.pendingSpeed) {
+      if (speedMatches) slot.pendingSpeed = false;
+    } else if (slot.lastSpeed !== undefined && !speedMatches) {
+      slot.lastSpeed = speed;
       changes.playbackSpeed = speed;
     }
     return changes;
   };
 
-  // Calls updateVideos when the videoData changes
-  useEffect(() => {
-    updateVideos();
-  }, [videoData]);
-
-  useEffect(() => {
-    return () => {
-      timeoutRefs.current.forEach((timeout) => {
-        if (timeout) clearTimeout(timeout);
-      });
-      delayTimeoutRefs.current.forEach((timeout) => {
-        if (timeout) clearTimeout(timeout);
-      });
-    };
-  }, []);
-
-  // Creates the videos for the ambiance player
-  const updateVideos = () => {
-    // Load YouTube Iframe API
-    if (!window.YT) {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      const firstScriptTag = document.getElementsByTagName("script")[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-    }
-
-    // Function to create players once API is ready
-    const createPlayers = () => {
-      if (!window.YT || !window.YT.Player) {
-        // Failed to create players, trying again...
-        setTimeout(createPlayers, 100);
-        return;
+  // Starts the 600ms poll that mirrors the iframe's time / play state into the
+  // playback channel, and adopts player-side volume & speed edits into videoData
+  const startSyncInterval = (player: any, index: number) => {
+    const slot = slotsRef.current[index];
+    clearSyncInterval(slot);
+    slot.syncInterval = setInterval(() => {
+      const changes = getPlayerSideChanges(player, slot);
+      if (Object.keys(changes).length > 0) {
+        setVideoData && updateObjectArr(setVideoData, index, changes);
       }
+      const rawTime = player.getCurrentTime();
+      const time =
+        rawTime === 0 ? videoDataRef.current[index].startTime : rawTime;
+      const state = player.getPlayerState();
+      const playing = state === 1;
+      const isDefinitiveState = state === 1 || state === 2;
+      const pb = playbackRef.current[index] ?? {};
+      if (
+        time !== pb.currentTime ||
+        (isDefinitiveState && playing !== pb.isPlaying)
+      ) {
+        writePlayback(index, {
+          currentTime: time,
+          ...(isDefinitiveState && { isPlaying: playing }),
+        });
+      }
+    }, 600);
+  };
 
-      // First pass: update all existing players synchronously
-      videoData.forEach((video, index) => {
-        const embedUrl = createUrl(video);
-        const videoId =
-          embedUrl && typeof embedUrl === "string"
-            ? embedUrl.match(/embed\/([^?]+)/)?.[1]
-            : undefined;
-
-        // Update existing player props immediately
-        if (playerRefs.current[index] && embedUrl && videoId) {
-          const player = playerRefs.current[index];
-          const desiredVol = video.volume ?? 100;
-          if (desiredVol !== lastVolumeRef.current[index]) {
-            player.setVolume(desiredVol);
-            lastVolumeRef.current[index] = desiredVol;
-            pendingVolumeRef.current[index] = true;
-          }
-          const desiredSpeed = video.playbackSpeed || 1.0;
-          if (desiredSpeed !== lastSpeedRef.current[index]) {
-            player.setPlaybackRate(desiredSpeed);
-            lastSpeedRef.current[index] = desiredSpeed;
-            pendingSpeedRef.current[index] = true;
-          }
-          const currentTime = player.getCurrentTime();
-          const prevStartTime = prevStartTimesRef.current[index];
-          const playerState = player.getPlayerState();
-          if (video.startTime !== undefined && video.endTime !== undefined) {
-            if (playerState === 1) {
-              if (
-                currentTime < video.startTime ||
-                currentTime > video.endTime ||
-                video.startTime != prevStartTime
-              ) {
-                player.seekTo(video.startTime);
-              }
-              scheduleLoop(player, index);
-            } else if (
-              prevStartTime !== undefined &&
-              video.startTime !== prevStartTime
-            ) {
-              // Plays video when user adjusts start thumb
-              if (showPlayOverlay) {
-                setShowPlayOverlay(false);
-              }
-              player.seekTo(video.startTime);
-              player.playVideo();
-            }
-          }
-          if (prevStartTimesRef.current[index] !== undefined) {
-            prevStartTimesRef.current[index] = video.startTime;
-          }
-
-          // Handle seekTo: seek to the requested position then immediately clear the instruction
-          if (video.seekTo !== undefined) {
-            clearDelayTimeout(index);
-            player.seekTo(video.seekTo);
-            player.playVideo();
-            if (showPlayOverlay) setShowPlayOverlay(false);
-            setVideoData &&
-              updateObjectArr(setVideoData, index, { seekTo: undefined });
-          }
-          // Handle pauseVideo: pause this individual video then immediately clear the instruction
-          if (video.pauseVideo) {
-            clearDelayTimeout(index);
-            player.pauseVideo();
-            setVideoData &&
-              updateObjectArr(setVideoData, index, { pauseVideo: undefined });
-          }
-        }
-      });
-
-      // Second pass: create new players sequentially
-      const createNewPlayers = async () => {
-        for (let index = 0; index < videoData.length; index++) {
-          const video = videoData[index];
-          const playerId = `player-${index}`;
-          const playerElement = document.getElementById(playerId);
-          const embedUrl = createUrl(video);
-          const videoId =
-            embedUrl && typeof embedUrl === "string"
-              ? embedUrl.match(/embed\/([^?]+)/)?.[1]
-              : undefined;
-
-          // Check if link is same from before and resets the video if its different
-          if (video.src !== prevLinksRef.current[index]) {
-            prevLinksRef.current[index] = video.src;
-            prevStartTimesRef.current[index] = undefined;
-            setVideoData &&
-              updateObjectArr(setVideoData, index, { currentTime: 0 });
-            if (timeoutRefs.current[index]) {
-              clearTimeout(timeoutRefs.current[index]!);
-              timeoutRefs.current[index] = null;
-            }
-            clearDelayTimeout(index);
-            lastVolumeRef.current[index] = undefined;
-            lastSpeedRef.current[index] = undefined;
-
-            if (videoIntervalRefs.current[index]) {
-              clearInterval(videoIntervalRefs.current[index]!);
-              videoIntervalRefs.current[index] = null;
-            }
-
-            if (playerRefs.current[index]) {
-              try {
-                playerRefs.current[index].stopVideo();
-                playerRefs.current[index].cueVideoById({
-                  videoId,
-                });
-              } catch (e) {
-                playerRefs.current[index] = null;
-                //console.log(`Error reloading player ${index}:`, e);
-              }
-            }
-          }
-
-          // Checking if the url is valid
-          if (!embedUrl) {
-            // This resets the ambiance input
-            if (video.linkError || video.duration) {
-              setVideoData &&
-                updateObjectArr(setVideoData, index, {
-                  title: undefined,
-                  channel: undefined,
-                  duration: undefined,
-                  linkError: undefined,
-                });
-            }
-            continue;
-          }
-          if (!videoId) continue;
-          // Skip if player already exists
-          if (playerRefs.current[index]) continue;
-
-          if (playerElement) {
-            // Skip if already initializing
-            if (initializingRef.current[index]) continue;
-            // Mark as initializing
-            initializingRef.current[index] = true;
-            // Add delay between player creations to prevent race conditions
-            if (index > 0)
-              await new Promise((resolve) => setTimeout(resolve, 200));
-            try {
-              const player = new window.YT.Player(playerId, {
-                height: "200px",
-                width: "200px",
-                videoId: videoId,
-                playerVars: {},
-                events: {
-                  onReady: (e: any) => {
-                    playerRefs.current[index] = e.target;
-                    initializingRef.current[index] = false;
-                    if (
-                      initializingRef.current.every((entry) => {
-                        return entry === false;
-                      })
-                    ) {
-                      setAllPlayersReady(true);
-                    }
-                    prevStartTimesRef.current[index] =
-                      initialVideoData?.[index]?.startTime ?? 0;
-                    prevCuedVideoIdsRef.current[index] =
-                      player.getVideoData().video_id;
-                    setVideoData &&
-                      updateObjectArr(setVideoData, index, {
-                        title: player.getVideoData().title,
-                        duration: player.getDuration(),
-                        startTime: initialVideoData?.[index]?.startTime || 0,
-                        endTime:
-                          initialVideoData?.[index]?.endTime ||
-                          player.getDuration(),
-                        volume: initialVideoData?.[index]?.volume || 100,
-                        playbackSpeed:
-                          initialVideoData?.[index]?.playbackSpeed || 1.0,
-                        loopDelay: initialVideoData?.[index]?.loopDelay,
-                        currentTime: initialVideoData?.[index]?.startTime ?? 0,
-                        linkError: undefined,
-                      });
-                    // Channel name isn't available from getVideoData(); fetch via oEmbed
-                    const readyVideoId = player.getVideoData().video_id;
-                    if (readyVideoId) {
-                      fetchChannelName(readyVideoId).then((channel) => {
-                        if (
-                          channel &&
-                          prevCuedVideoIdsRef.current[index] === readyVideoId
-                        ) {
-                          setVideoData &&
-                            updateObjectArr(setVideoData, index, { channel });
-                        }
-                      });
-                    }
-                    // Starts playing the video if other videos are playing already,
-                    // or if this video itself was playing before the link was replaced
-                    const isOtherVideoPlaying =
-                      playerRefs.current.some(
-                        (p, i) => p && i !== index && p.getPlayerState() === 1,
-                      ) || videoDataRef.current[index]?.isPlaying === true;
-                    if (isOtherVideoPlaying) {
-                      e.target.playVideo();
-                    }
-
-                    videoIntervalRefs.current[index] = setInterval(() => {
-                      const player = e.target;
-                      const changes = getPlayerSideChanges(player, index);
-                      const rawTime = player.getCurrentTime();
-                      const time =
-                        rawTime === 0
-                          ? videoDataRef.current[index].startTime
-                          : rawTime;
-                      const vd = videoDataRef.current[index];
-                      const state = player.getPlayerState();
-                      const playing = state === 1;
-                      const isDefinitiveState = state === 1 || state === 2;
-                      if (
-                        Object.keys(changes).length > 0 ||
-                        time !== vd.currentTime ||
-                        (isDefinitiveState && playing !== vd.isPlaying)
-                      ) {
-                        setVideoData &&
-                          updateObjectArr(setVideoData, index, {
-                            ...changes,
-                            currentTime: time,
-                            ...(isDefinitiveState && { isPlaying: playing }),
-                          });
-                      }
-                    }, 600);
-                    muted && e.target.mute();
-                  },
-                  onPlaybackRateChange: (e: any) => {
-                    // Reschedules the loop if video is currently playing
-                    if (e.target.getPlayerState() === 1) {
-                      scheduleLoop(e.target, index);
-                    }
-                  },
-                  onStateChange: (e: any) => {
-                    switch (e.data) {
-                      // Video started playing after being seeking/buffering/being unpaused
-                      case 1: {
-                        const currentTime = player.getCurrentTime();
-                        const startTime =
-                          videoDataRef.current[index].startTime || 0;
-                        const endTime =
-                          videoDataRef.current[index].endTime ||
-                          e.target.getDuration();
-                        if (currentTime < startTime || currentTime > endTime) {
-                          player.seekTo(startTime);
-                        } else {
-                          scheduleLoop(e.target, index);
-                        }
-                        break;
-                      }
-                      // Video paused or buffering, stops the loop timer
-                      case 2:
-                      case 3: {
-                        scheduleLoop(e.target, index, true);
-                        break;
-                      }
-                      // Video cued - should happen when user replaces src link with another
-                      case 5: {
-                        const cuedVideoId = player.getVideoData().video_id;
-                        const currentTitle = player.getVideoData().title;
-                        // Ignore cues without a title; allow same-ID cues when the video is hidden
-                        // This is done to avoid ambInput collapse and re-expand when link is replaced
-                        // We also need the title condition so deleting and immediately loading the same link works
-                        if (
-                          cuedVideoId &&
-                          currentTitle &&
-                          (cuedVideoId !== prevCuedVideoIdsRef.current[index] ||
-                            !videoDataRef.current[index].title)
-                        ) {
-                          prevCuedVideoIdsRef.current[index] = cuedVideoId;
-                          prevStartTimesRef.current[index] = 0;
-                          // We need to set up all the data / timers again here
-                          setVideoData &&
-                            updateObjectArr(setVideoData, index, {
-                              title: currentTitle,
-                              channel: undefined,
-                              duration: player.getDuration(),
-                              startTime: 0,
-                              endTime: player.getDuration(),
-                              volume: 100,
-                              playbackSpeed: 1.0,
-                              loopDelay: undefined,
-                              linkError: undefined,
-                            });
-                          // Channel name isn't available from getVideoData(); fetch via oEmbed
-                          fetchChannelName(cuedVideoId).then((channel) => {
-                            if (
-                              channel &&
-                              prevCuedVideoIdsRef.current[index] === cuedVideoId
-                            ) {
-                              setVideoData &&
-                                updateObjectArr(setVideoData, index, {
-                                  channel,
-                                });
-                            }
-                          });
-                          // Starts playing the video if other videos are playing already,
-                          // or if this video itself was playing before the link was replaced
-                          const isOtherVideoPlaying =
-                            playerRefs.current.some(
-                              (p, i) =>
-                                p && i !== index && p.getPlayerState() === 1,
-                            ) ||
-                            videoDataRef.current[index]?.isPlaying === true;
-                          if (isOtherVideoPlaying) {
-                            e.target.playVideo();
-                          }
-
-                          videoIntervalRefs.current[index] = setInterval(() => {
-                            const player = e.target;
-                            const changes = getPlayerSideChanges(
-                              player,
-                              index,
-                            );
-                            const rawTime = player.getCurrentTime();
-                            const time =
-                              rawTime === 0
-                                ? videoDataRef.current[index].startTime
-                                : rawTime;
-                            const vd = videoDataRef.current[index];
-                            const state = player.getPlayerState();
-                            const playing = state === 1;
-                            const isDefinitiveState =
-                              state === 1 || state === 2;
-                            if (
-                              Object.keys(changes).length > 0 ||
-                              time !== vd.currentTime ||
-                              (isDefinitiveState && playing !== vd.isPlaying)
-                            ) {
-                              setVideoData &&
-                                updateObjectArr(setVideoData, index, {
-                                  ...changes,
-                                  currentTime: time,
-                                  ...(isDefinitiveState && {
-                                    isPlaying: playing,
-                                  }),
-                                });
-                            }
-                          }, 600);
-                        }
-                        break;
-                      }
-                      // Video ended, needed for custom endTimes
-                      case 0: {
-                        const videoData = videoDataRef.current[index];
-                        if (inDelayPauseRef.current[index]) break;
-                        if (videoData.loopDelay && videoData.loopDelay > 0) {
-                          inDelayPauseRef.current[index] = true;
-                          player.seekTo(videoData.startTime || 0);
-                          player.pauseVideo();
-                          delayTimeoutRefs.current[index] = setTimeout(() => {
-                            inDelayPauseRef.current[index] = false;
-                            player.playVideo();
-                          }, videoData.loopDelay * 1000);
-                        } else {
-                          player.seekTo(videoData.startTime || 0);
-                        }
-                        break;
-                      }
-                    }
-                  },
-                  onError: (e: any) => {
-                    // console.log(`🚨 Player ${index} error:`, e.data);
-                    // console.log("Error code:", e.data);
-                    if (e.data === 100) {
-                      setVideoData &&
-                        updateObjectArr(setVideoData, index, {
-                          title: undefined,
-                          channel: undefined,
-                          duration: undefined,
-                          linkError: `Video not found`,
-                        });
-                    } else if (e.data === 150 || e.data === 101) {
-                      // 150/101 can mean unembeddable or unavailable — check via oEmbed
-                      const currentSrc = videoDataRef.current[index].src;
-                      const vid = currentSrc?.match(
-                        /(?:v=|shorts\/|embed\/)([\w-]+)/,
-                      )?.[1];
-                      if (vid) {
-                        (async () => {
-                          try {
-                            const res = await fetch(
-                              `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${vid}`)}&format=json`,
-                            );
-                            const text = await res.text();
-                            setVideoData &&
-                              updateObjectArr(setVideoData, index, {
-                                title: undefined,
-                                channel: undefined,
-                                duration: undefined,
-                                linkError:
-                                  text === "Bad Request"
-                                    ? `Video not found`
-                                    : `Video cannot be embedded`,
-                              });
-                          } catch {
-                            setVideoData &&
-                              updateObjectArr(setVideoData, index, {
-                                title: undefined,
-                                channel: undefined,
-                                duration: undefined,
-                                linkError: `Video not found`,
-                              });
-                          }
-                        })();
-                      }
-                    }
-                  },
-                },
-              });
-            } catch {
-              // Resets the player <div> when user inputs a video id that doesn't exist
-              playerRefs.current[index] = null;
-              const wrapperElement = document.getElementById(
-                `video-wrapper-${index}`,
-              );
-              const playerElement = document.getElementById(`player-${index}`);
-              const newPlayerElement = document.createElement("div");
-              newPlayerElement.id = `player-${index}`;
-              if (!playerElement) return;
-              wrapperElement?.replaceChild(newPlayerElement, playerElement);
-              // console.log("video id prob doesn't exist");
-              initializingRef.current[index] = false;
-              if (
-                initializingRef.current.every((entry) => {
-                  return entry === false;
-                })
-              ) {
-                setAllPlayersReady(true);
-              }
-              if (videoDataRef.current[index].linkError) continue; // stops infinite render
-              setVideoData &&
-                updateObjectArr(setVideoData, index, {
-                  title: undefined,
-                  channel: undefined,
-                  duration: undefined,
-                  linkError: `Video not found`,
-                });
-            }
-          }
-        }
-      };
-
-      createNewPlayers();
-    };
-
-    // Set up API ready callback
-    window.onYouTubeIframeAPIReady = createPlayers;
-
-    // If API is already loaded, create players immediately
-    if (window.YT && window.YT.Player) {
-      createPlayers();
+  // Loops a video back to its startTime, pausing for loopDelay seconds first if set.
+  // `ended` keeps the original seek / pause ordering for each caller
+  const handleLoopEnd = (player: any, index: number, ended: boolean) => {
+    const slot = slotsRef.current[index];
+    const vd = videoDataRef.current[index];
+    const start = vd.startTime || 0;
+    if (vd.loopDelay && vd.loopDelay > 0) {
+      slot.inDelayPause = true;
+      if (ended) {
+        player.seekTo(start);
+        player.pauseVideo();
+      } else {
+        player.pauseVideo();
+        player.seekTo(start);
+      }
+      slot.delayTimeout = setTimeout(() => {
+        slot.inDelayPause = false;
+        player.playVideo();
+      }, vd.loopDelay * 1000);
+      return;
     }
+    player.seekTo(start);
   };
 
   // Gives each video a timeout that gets called at their endTime
   const scheduleLoop = useCallback(
     (player: any, index: number, stopping?: boolean) => {
-      const videoData = videoDataRef.current[index];
-      // Clears existing timeout for this video
-      if (timeoutRefs.current[index]) {
-        clearTimeout(timeoutRefs.current[index]!);
-        timeoutRefs.current[index] = null;
-      }
+      const slot = slotsRef.current[index];
+      clearLoopTimeout(slot);
       if (stopping) return;
+      const vd = videoDataRef.current[index];
       const currentTime = player.getCurrentTime();
-      const endTime = videoData.endTime ?? player.getDuration();
+      const endTime = vd.endTime ?? player.getDuration();
       const playbackSpeed = player.getPlaybackRate() || 1;
       const timeRemaining = (endTime - currentTime) / playbackSpeed;
       if (timeRemaining > 0) {
-        timeoutRefs.current[index] = setTimeout(() => {
-          const videoData = videoDataRef.current[index];
-          if (videoData.loopDelay && videoData.loopDelay > 0) {
-            inDelayPauseRef.current[index] = true;
-            player.pauseVideo();
-            player.seekTo(videoData.startTime || 0);
-            delayTimeoutRefs.current[index] = setTimeout(() => {
-              inDelayPauseRef.current[index] = false;
-              player.playVideo();
-            }, videoData.loopDelay * 1000);
-            return;
-          }
-          player.seekTo(videoData.startTime || 0);
-        }, timeRemaining * 1000);
+        slot.loopTimeout = setTimeout(
+          () => handleLoopEnd(player, index, false),
+          timeRemaining * 1000,
+        );
       }
     },
     [],
   );
 
-  // Clears the pending loop delay timeout for a video
-  const clearDelayTimeout = useCallback((index: number) => {
-    inDelayPauseRef.current[index] = false;
-    if (delayTimeoutRefs.current[index]) {
-      clearTimeout(delayTimeoutRefs.current[index]!);
-      delayTimeoutRefs.current[index] = null;
+  // Shared setup for a video that just became available in a player, either because
+  // the player was created (onReady) or a new link was cued into it (state 5).
+  // `initial` seeds config from a saved ambiance; `extra` carries caller-specific fields
+  const initializeVideo = (
+    player: any,
+    index: number,
+    videoId: string | undefined,
+    initial: VideoData | undefined,
+    extra: Partial<VideoData>,
+  ) => {
+    const slot = slotsRef.current[index];
+    slot.cuedVideoId = videoId;
+    slot.prevStartTime = initial?.startTime ?? 0;
+    const duration = player.getDuration();
+    setVideoData &&
+      updateObjectArr(setVideoData, index, {
+        title: player.getVideoData().title,
+        duration,
+        startTime: initial?.startTime || 0,
+        endTime: initial?.endTime || duration,
+        volume: initial?.volume || 100,
+        playbackSpeed: initial?.playbackSpeed || 1.0,
+        loopDelay: initial?.loopDelay,
+        linkError: undefined,
+        ...extra,
+      });
+    // Channel name isn't available from getVideoData(); fetch via oEmbed
+    if (videoId) {
+      fetchChannelName(videoId).then((channel) => {
+        if (channel && slot.cuedVideoId === videoId) {
+          setVideoData && updateObjectArr(setVideoData, index, { channel });
+        }
+      });
     }
+    // Starts playing the video if other videos are playing already,
+    // or if this video itself was playing before the link was replaced
+    if (
+      isAnyOtherPlaying(index) ||
+      playbackRef.current[index]?.isPlaying === true
+    ) {
+      player.playVideo();
+    }
+    startSyncInterval(player, index);
+  };
+
+  // Load the YouTube IFrame API once on mount
+  useEffect(() => {
+    let cancelled = false;
+    loadYouTubeApi().then(() => {
+      if (!cancelled) setApiReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  // Syncs the players whenever the videoData changes
+  useEffect(() => {
+    if (apiReady) updateVideos();
+  }, [videoData, apiReady]);
+
+  // Clears every timer on unmount so orphaned intervals can't keep writing state
+  useEffect(() => {
+    return () => {
+      slotsRef.current.forEach((slot) => {
+        clearLoopTimeout(slot);
+        if (slot.delayTimeout) clearTimeout(slot.delayTimeout);
+        clearSyncInterval(slot);
+      });
+    };
+  }, []);
+
+  // Creates / updates the videos for the ambiance player
+  const updateVideos = () => {
+    ensureSlots(videoData.length);
+    const slots = slotsRef.current;
+
+    // First pass: update all existing players synchronously
+    videoData.forEach((video, index) => {
+      const slot = slots[index];
+      const videoId = extractYouTubeId(video.src);
+      if (!slot.player || !videoId) return;
+      const player = slot.player;
+
+      const desiredVol = video.volume ?? 100;
+      if (desiredVol !== slot.lastVolume) {
+        player.setVolume(desiredVol);
+        slot.lastVolume = desiredVol;
+        slot.pendingVolume = true;
+      }
+      const desiredSpeed = video.playbackSpeed || 1.0;
+      if (desiredSpeed !== slot.lastSpeed) {
+        player.setPlaybackRate(desiredSpeed);
+        slot.lastSpeed = desiredSpeed;
+        slot.pendingSpeed = true;
+      }
+      const currentTime = player.getCurrentTime();
+      const prevStartTime = slot.prevStartTime;
+      const playerState = player.getPlayerState();
+      if (video.startTime !== undefined && video.endTime !== undefined) {
+        if (playerState === 1) {
+          if (
+            currentTime < video.startTime ||
+            currentTime > video.endTime ||
+            video.startTime != prevStartTime
+          ) {
+            player.seekTo(video.startTime);
+          }
+          scheduleLoop(player, index);
+        } else if (
+          prevStartTime !== undefined &&
+          video.startTime !== prevStartTime
+        ) {
+          // Plays video when user adjusts start thumb
+          setShowPlayOverlay(false);
+          player.seekTo(video.startTime);
+          player.playVideo();
+        }
+      }
+      if (slot.prevStartTime !== undefined) {
+        slot.prevStartTime = video.startTime;
+      }
+    });
+
+    // Second pass: create new players sequentially
+    const createNewPlayers = async () => {
+      for (let index = 0; index < videoData.length; index++) {
+        const video = videoData[index];
+        const slot = slots[index];
+        const playerId = `player-${index}`;
+        const playerElement = document.getElementById(playerId);
+        const videoId = extractYouTubeId(video.src);
+
+        // Check if link is same from before and resets the video if its different
+        if (video.src !== slot.prevSrc) {
+          slot.prevSrc = video.src;
+          slot.prevStartTime = undefined;
+          writePlayback(index, { currentTime: 0 });
+          clearLoopTimeout(slot);
+          clearDelayTimeout(index);
+          slot.lastVolume = undefined;
+          slot.lastSpeed = undefined;
+          clearSyncInterval(slot);
+
+          if (slot.player) {
+            try {
+              slot.player.stopVideo();
+              slot.player.cueVideoById({ videoId });
+            } catch (e) {
+              slot.player = null;
+              //console.log(`Error reloading player ${index}:`, e);
+            }
+          }
+        }
+
+        // Checking if the url is valid
+        if (!videoId) {
+          // This resets the ambiance input
+          if (video.linkError || video.duration) {
+            setVideoData &&
+              updateObjectArr(setVideoData, index, clearedMeta(undefined));
+          }
+          continue;
+        }
+        // Skip if player already exists
+        if (slot.player) continue;
+
+        if (playerElement) {
+          // Skip if already initializing
+          if (slot.initializing) continue;
+          // Mark as initializing
+          slot.initializing = true;
+          // Add delay between player creations to prevent race conditions
+          if (index > 0)
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          try {
+            new window.YT.Player(playerId, {
+              height: "200px",
+              width: "200px",
+              videoId: videoId,
+              playerVars: {},
+              events: {
+                onReady: (e: any) => {
+                  const player = e.target;
+                  slot.player = player;
+                  markReady(index);
+                  writePlayback(index, {
+                    currentTime: initialVideoData?.[index]?.startTime ?? 0,
+                  });
+                  initializeVideo(
+                    player,
+                    index,
+                    player.getVideoData().video_id,
+                    initialVideoData?.[index],
+                    {},
+                  );
+                  muted && player.mute();
+                },
+                onPlaybackRateChange: (e: any) => {
+                  // Reschedules the loop if video is currently playing
+                  if (e.target.getPlayerState() === 1) {
+                    scheduleLoop(e.target, index);
+                  }
+                },
+                onStateChange: (e: any) => {
+                  const player = e.target;
+                  switch (e.data) {
+                    // Video started playing after being seeking/buffering/being unpaused
+                    case 1: {
+                      const currentTime = player.getCurrentTime();
+                      const startTime =
+                        videoDataRef.current[index].startTime || 0;
+                      const endTime =
+                        videoDataRef.current[index].endTime ||
+                        player.getDuration();
+                      if (currentTime < startTime || currentTime > endTime) {
+                        player.seekTo(startTime);
+                      } else {
+                        scheduleLoop(player, index);
+                      }
+                      break;
+                    }
+                    // Video paused or buffering, stops the loop timer
+                    case 2:
+                    case 3: {
+                      scheduleLoop(player, index, true);
+                      break;
+                    }
+                    // Video cued - should happen when user replaces src link with another
+                    case 5: {
+                      const cuedVideoId = player.getVideoData().video_id;
+                      const currentTitle = player.getVideoData().title;
+                      // Ignore cues without a title; allow same-ID cues when the video is hidden
+                      // This is done to avoid ambInput collapse and re-expand when link is replaced
+                      // We also need the title condition so deleting and immediately loading the same link works
+                      if (
+                        cuedVideoId &&
+                        currentTitle &&
+                        (cuedVideoId !== slot.cuedVideoId ||
+                          !videoDataRef.current[index].title)
+                      ) {
+                        // We need to set up all the data / timers again here
+                        initializeVideo(player, index, cuedVideoId, undefined, {
+                          channel: undefined,
+                        });
+                      }
+                      break;
+                    }
+                    // Video ended, needed for custom endTimes
+                    case 0: {
+                      if (slot.inDelayPause) break;
+                      handleLoopEnd(player, index, true);
+                      break;
+                    }
+                  }
+                },
+                onError: (e: any) => {
+                  // console.log(`🚨 Player ${index} error:`, e.data);
+                  if (e.data === 100) {
+                    setVideoData &&
+                      updateObjectArr(
+                        setVideoData,
+                        index,
+                        clearedMeta(`Video not found`),
+                      );
+                  } else if (e.data === 150 || e.data === 101) {
+                    // 150/101 can mean unembeddable or unavailable — check via oEmbed
+                    const vid = extractYouTubeId(
+                      videoDataRef.current[index].src,
+                    );
+                    if (vid) {
+                      fetch(oEmbedUrl(vid))
+                        .then((res) => res.text())
+                        .then((text) => {
+                          setVideoData &&
+                            updateObjectArr(
+                              setVideoData,
+                              index,
+                              clearedMeta(
+                                text === "Bad Request"
+                                  ? `Video not found`
+                                  : `Video cannot be embedded`,
+                              ),
+                            );
+                        })
+                        .catch(() => {
+                          setVideoData &&
+                            updateObjectArr(
+                              setVideoData,
+                              index,
+                              clearedMeta(`Video not found`),
+                            );
+                        });
+                    }
+                  }
+                },
+              },
+            });
+          } catch {
+            // Resets the player <div> when user inputs a video id that doesn't exist
+            slot.player = null;
+            const wrapperElement = document.getElementById(
+              `video-wrapper-${index}`,
+            );
+            const playerElement = document.getElementById(`player-${index}`);
+            const newPlayerElement = document.createElement("div");
+            newPlayerElement.id = `player-${index}`;
+            if (!playerElement) return;
+            wrapperElement?.replaceChild(newPlayerElement, playerElement);
+            // console.log("video id prob doesn't exist");
+            markReady(index);
+            if (videoDataRef.current[index].linkError) continue; // stops infinite render
+            setVideoData &&
+              updateObjectArr(
+                setVideoData,
+                index,
+                clearedMeta(`Video not found`),
+              );
+          }
+        }
+      }
+    };
+
+    createNewPlayers();
+  };
+
   const play = useCallback(() => {
+    const slots = slotsRef.current;
+    // Nothing to play until at least one player has started creating,
+    // and never while any player is still being created
     if (
-      initializingRef.current.length === 0 ||
-      initializingRef.current.some((entry) => {
-        return entry === true;
-      })
+      !slots.some((slot) => slot.initializing !== undefined) ||
+      slots.some((slot) => slot.initializing === true)
     ) {
       return;
     }
-    playerRefs.current.forEach((player, index) => {
-      if (!player) return;
+    forEachPlayer((player, index) => {
       clearDelayTimeout(index);
       player.playVideo();
     });
-    if (showPlayOverlay) {
-      setShowPlayOverlay(false);
-    }
+    setShowPlayOverlay(false);
   }, []);
 
   const pause = useCallback(() => {
-    playerRefs.current.forEach((player, index) => {
-      if (!player) return;
+    forEachPlayer((player, index) => {
       clearDelayTimeout(index);
       player.pauseVideo();
     });
@@ -733,59 +722,108 @@ export default function AmbiancePlayer({
     if ((videoDataRef.current[index]?.volume ?? 100) === 0) {
       player.setVolume(0);
       // Ignore the transient 5% the player may report before it echoes 0 back
-      pendingVolumeRef.current[index] = true;
+      slotsRef.current[index].pendingVolume = true;
     }
   }
 
   const mute = useCallback(() => {
-    playerRefs.current.forEach((player) => {
-      player && player.mute();
-    });
+    forEachPlayer((player) => player.mute());
     setMuted(true);
   }, []);
 
   const unmute = useCallback(() => {
-    playerRefs.current.forEach((player, index) => {
-      if (!player) return;
-      unmutePlayer(player, index);
-    });
+    forEachPlayer((player, index) => unmutePlayer(player, index));
     setMuted(false);
   }, []);
 
-  const rewind = useCallback(() => {
-    playerRefs.current.forEach((player, index) => {
-      if (!player) return;
-      clearDelayTimeout(index);
-      player.seekTo(videoDataRef.current[index].startTime);
-      player.playVideo();
-      unmutePlayer(player, index);
-    });
-    if (showPlayOverlay) {
+  // Seeks every player to the time returned by getTime, resumes it, and unmutes
+  const seekAll = useCallback(
+    (getTime: (player: any, vd: VideoData) => number) => {
+      forEachPlayer((player, index) => {
+        clearDelayTimeout(index);
+        player.seekTo(getTime(player, videoDataRef.current[index]));
+        player.playVideo();
+        unmutePlayer(player, index);
+      });
       setShowPlayOverlay(false);
-    }
-    setMuted(false);
+      setMuted(false);
+    },
+    [],
+  );
+
+  const rewind = useCallback(() => {
+    seekAll((_, vd) => vd.startTime as number);
   }, []);
 
   const jumpBack = useCallback(() => {
-    playerRefs.current.forEach((player, index) => {
-      if (!player) return;
-      clearDelayTimeout(index);
+    seekAll((player, vd) => {
       let newTime = player.getCurrentTime() - 10;
-      if (
-        videoDataRef.current[index].startTime &&
-        newTime < videoDataRef.current[index].startTime
-      ) {
-        newTime = videoDataRef.current[index].startTime;
+      if (vd.startTime && newTime < vd.startTime) {
+        newTime = vd.startTime;
       }
-      player.seekTo(newTime);
-      player.playVideo();
-      unmutePlayer(player, index);
+      return newTime;
     });
-    if (showPlayOverlay) {
-      setShowPlayOverlay(false);
-    }
-    setMuted(false);
   }, []);
+
+  const jumpForward = useCallback(() => {
+    seekAll((player, vd) => {
+      let newTime = player.getCurrentTime() + 10;
+      if (vd && newTime > (vd.endTime || player.getDuration())) {
+        newTime =
+          (vd.startTime || 0) + newTime - (vd.endTime || player.getDuration());
+      }
+      return newTime;
+    });
+  }, []);
+
+  // Seeks a single player to `time` and resumes it (used by the per-video mini controls)
+  const seekOne = (index: number, time: number) => {
+    const player = slotsRef.current[index]?.player;
+    if (!player) return;
+    clearDelayTimeout(index);
+    player.seekTo(time);
+    player.playVideo();
+    setShowPlayOverlay(false);
+  };
+
+  // Per-video controls exposed to the parent. These mirror what the inputs
+  // used to request through videoData.seekTo / pauseVideo
+  useImperativeHandle(
+    ref,
+    () => ({
+      playPause: (index) => {
+        const player = slotsRef.current[index]?.player;
+        if (!player) return;
+        if (playbackRef.current[index]?.isPlaying) {
+          clearDelayTimeout(index);
+          player.pauseVideo();
+          return;
+        }
+        const vd = videoDataRef.current[index];
+        // A 0 reading means the player hasn't started, so resume from startTime
+        seekOne(index, player.getCurrentTime() || vd.startTime || 0);
+      },
+      rewind: (index) => {
+        seekOne(index, videoDataRef.current[index]?.startTime ?? 0);
+      },
+      jumpBack: (index) => {
+        const player = slotsRef.current[index]?.player;
+        if (!player) return;
+        const vd = videoDataRef.current[index];
+        const current = player.getCurrentTime() || vd.startTime || 0;
+        seekOne(index, Math.max(current - 10, vd.startTime ?? 0));
+      },
+      jumpForward: (index) => {
+        const player = slotsRef.current[index]?.player;
+        if (!player) return;
+        const vd = videoDataRef.current[index];
+        const current = player.getCurrentTime() || vd.startTime || 0;
+        const end = vd.endTime ?? vd.duration ?? current;
+        seekOne(index, Math.min(current + 10, end));
+      },
+    }),
+    [],
+  );
 
   const handleMouseMove = useCallback(() => {
     setControlsVisible(true);
@@ -814,30 +852,6 @@ export default function AmbiancePlayer({
   }, [fullscreenHandle.active]);
 
   const hasLoadedVideo = videoData.some((v) => v.title);
-
-  const jumpForward = useCallback(() => {
-    playerRefs.current.forEach((player, index) => {
-      if (!player) return;
-      clearDelayTimeout(index);
-      let newTime = player.getCurrentTime() + 10;
-      if (
-        videoDataRef.current[index] &&
-        newTime > (videoDataRef.current[index].endTime || player.getDuration())
-      ) {
-        newTime =
-          (videoDataRef.current[index].startTime || 0) +
-          newTime -
-          (videoDataRef.current[index].endTime || player.getDuration());
-      }
-      player.seekTo(newTime);
-      player.playVideo();
-      unmutePlayer(player, index);
-    });
-    if (showPlayOverlay) {
-      setShowPlayOverlay(false);
-    }
-    setMuted(false);
-  }, []);
 
   return (
     <div
@@ -968,4 +982,4 @@ export default function AmbiancePlayer({
       </FullScreen>
     </div>
   );
-}
+});

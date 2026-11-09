@@ -4,7 +4,10 @@ import Link from "next/link";
 import styles from "./ambianceMaker.module.css";
 import classNames from "classnames";
 import AmbianceInput from "@/app/components/Ambiance Input/ambianceInput";
-import AmbiancePlayer from "@/app/components/Ambiance Player/ambiancePlayer";
+import AmbiancePlayer, {
+  extractYouTubeId,
+  type AmbiancePlayerHandle,
+} from "@/app/components/Ambiance Player/ambiancePlayer";
 import Button from "@/app/components/Buttons/Button Set/button";
 import Modal from "@/app/components/Modals/Modal Versatile Portal/modal";
 import SubmitAmbiance from "@/app/components/Submit Ambiance/submitAmbiance";
@@ -24,6 +27,7 @@ interface AmbianceMakerProps {
   style?: React.CSSProperties;
 }
 
+// User-authored config plus YouTube metadata for one video slot
 export interface VideoData {
   src?: string;
   linkError?: string;
@@ -32,13 +36,16 @@ export interface VideoData {
   duration?: number;
   startTime?: number;
   endTime?: number;
-  currentTime?: number;
   volume?: number;
   playbackSpeed?: number;
   loopDelay?: number;
+}
+
+// Fast-changing playhead state, kept separate from VideoData so the 600ms
+// player poll doesn't re-run the config sync or re-render every input
+export interface PlaybackState {
+  currentTime?: number;
   isPlaying?: boolean;
-  seekTo?: number;
-  pauseVideo?: boolean;
 }
 
 export interface AmbianceData {
@@ -65,13 +72,9 @@ export const createVideoEntry = (): VideoData => ({
   duration: undefined,
   startTime: undefined,
   endTime: undefined,
-  currentTime: undefined,
   volume: undefined,
   playbackSpeed: undefined,
   loopDelay: undefined,
-  isPlaying: undefined,
-  seekTo: undefined,
-  pauseVideo: undefined,
 });
 
 export default function AmbianceMaker({
@@ -88,6 +91,17 @@ export default function AmbianceMaker({
   const [showRatingInput, setShowRatingInput] = useState(false);
   const [userRating, setUserRating] = useState<number | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
+
+  // Creates the video data
+  const [videoData, setVideoData] = useState<VideoData[]>(
+    Array.from({ length: maxVideos }, createVideoEntry),
+  );
+  // Playhead state written by the player's poll, read by the inputs
+  const [playback, setPlayback] = useState<PlaybackState[]>(
+    Array.from({ length: maxVideos }, () => ({})),
+  );
+  const playerRef = useRef<AmbiancePlayerHandle>(null);
+
   // Handles when an inputs link / src changes
   const onLinkChange = useCallback((link: string, index = 0) => {
     updateObjectArr(setVideoData, index, { src: link });
@@ -116,49 +130,19 @@ export default function AmbianceMaker({
     updateObjectArr(setVideoData, index, { loopDelay: delay });
   }, []);
 
-  // Handles per-video play / pause
-  function onPlayPause(index = 0) {
-    if (videoData[index].isPlaying) {
-      updateObjectArr(setVideoData, index, { pauseVideo: true });
-    } else {
-      updateObjectArr(setVideoData, index, {
-        seekTo: videoData[index].currentTime ?? videoData[index].startTime ?? 0,
-      });
-    }
-  }
-
-  // Handles per-video rewind to start
-  function onRewind(index = 0) {
-    updateObjectArr(setVideoData, index, {
-      seekTo: videoData[index].startTime ?? 0,
-    });
-  }
-
-  // Handles per-video jump back 10s
-  function onJumpBack(index = 0) {
-    const current =
-      videoData[index].currentTime ?? videoData[index].startTime ?? 0;
-    const start = videoData[index].startTime ?? 0;
-    updateObjectArr(setVideoData, index, {
-      seekTo: Math.max(current - 10, start),
-    });
-  }
-
-  // Handles per-video jump forward 10s
-  function onJumpForward(index = 0) {
-    const current =
-      videoData[index].currentTime ?? videoData[index].startTime ?? 0;
-    const end =
-      videoData[index].endTime ?? videoData[index].duration ?? current;
-    updateObjectArr(setVideoData, index, {
-      seekTo: Math.min(current + 10, end),
-    });
-  }
-
-  // Creates the video data
-  const [videoData, setVideoData] = useState<VideoData[]>(
-    Array.from({ length: maxVideos }, createVideoEntry),
-  );
+  // Per-video controls are forwarded straight to the player
+  const onPlayPause = useCallback((index = 0) => {
+    playerRef.current?.playPause(index);
+  }, []);
+  const onRewind = useCallback((index = 0) => {
+    playerRef.current?.rewind(index);
+  }, []);
+  const onJumpBack = useCallback((index = 0) => {
+    playerRef.current?.jumpBack(index);
+  }, []);
+  const onJumpForward = useCallback((index = 0) => {
+    playerRef.current?.jumpForward(index);
+  }, []);
 
   // Shows the buttons fully when there is at least 2 videos, makes them clickable
   const [showButtons, setShowButtons] = useState(false);
@@ -254,19 +238,8 @@ export default function AmbianceMaker({
     let text = `${process.env.NEXT_PUBLIC_PROTOCOL}${process.env.NEXT_PUBLIC_DOMAIN}/share?`;
     let ampersand = false;
     videoData.forEach((video, index) => {
-      const match =
-        video.src?.match(
-          /(?:https?:\/\/)?(?:[\w-]+\.)*youtube\.com\/watch\?v=([\w-]+)/i,
-        ) ||
-        video.src?.match(
-          /(?:https?:\/\/)?(?:[\w-]+\.)*youtube\.com\/shorts\/([\w-]+)/i,
-        ) ||
-        video.src?.match(
-          /(?:https?:\/\/)?(?:[\w-]+\.)*youtube\.com\/embed\/([\w-]+)/i,
-        ) ||
-        null;
-      if (!match) return;
-      const videoId = match[1];
+      const videoId = extractYouTubeId(video.src);
+      if (!videoId) return;
       const delayToken = video.loopDelay ? `d${video.loopDelay}` : ``;
       text += `${ampersand ? `&` : ``}v${index + 1}=s${video.startTime}e${video.endTime}v${video.volume}r${Math.round(Number(video.playbackSpeed) * 100)}${delayToken}id${videoId}`;
       ampersand = true;
@@ -634,9 +607,11 @@ export default function AmbianceMaker({
       )}
       <div className={styles.player_wrapper}>
         <AmbiancePlayer
+          ref={playerRef}
           videoData={videoData}
           initialVideoData={ambianceData?.videoData}
           setVideoData={setVideoData}
+          setPlayback={setPlayback}
           showInitialPlayButton={mode === "shared" || mode === "published"}
         />
       </div>
@@ -655,7 +630,7 @@ export default function AmbianceMaker({
               videoDuration={video.duration}
               startTime={video.startTime}
               endTime={video.endTime}
-              currentTime={video.currentTime}
+              currentTime={playback[videoIndex]?.currentTime}
               volume={video.volume}
               playbackSpeed={video.playbackSpeed}
               loopDelay={video.loopDelay}
@@ -665,7 +640,7 @@ export default function AmbianceMaker({
               onVolumeChange={onVolumeChange}
               onSpeedChange={onSpeedChange}
               onDelayChange={onDelayChange}
-              isPlaying={video.isPlaying}
+              isPlaying={playback[videoIndex]?.isPlaying}
               onPlayPause={onPlayPause}
               onRewind={onRewind}
               onJumpBack={onJumpBack}
