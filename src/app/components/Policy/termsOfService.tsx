@@ -117,9 +117,10 @@ export default function TermsOfService() {
             .
           </p>
           <p>
-            You are responsible for the videos you include in your ambiances.
-            Video owners may request removal of their content from the website
-            by contacting us at the address below.
+            If you own a video that appears in an ambiance and would prefer it
+            not be used on Ambiance Maker, let us know at the address at the
+            bottom of this page. Please include a link to the ambiance if you
+            can.
           </p>
         </section>
 
