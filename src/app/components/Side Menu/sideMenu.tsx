@@ -16,6 +16,7 @@ import PencilIcon from "@/app/components/Icons/pencil";
 import SettingsIcon from "@/app/components/Icons/settings";
 import BooksIcon from "@/app/components/Icons/books";
 import BookmarkIcon from "@/app/components/Icons/bookmark";
+import MagnifyingGlassIcon from "@/app/components/Icons/magnifying_glass";
 import { useUser } from "@/app/contexts/userContext";
 
 interface SideMenuProps {
@@ -178,6 +179,17 @@ export default function SideMenu({
         </div>
         <div className={styles.menu_items}>
           <Link
+            href="/create"
+            title="Create"
+            className={styles.menu_item}
+            onClick={linkClicked}
+          >
+            <div className={styles.item_content}>
+              <PencilIcon />
+              <span>Create</span>
+            </div>
+          </Link>
+          <Link
             href="/categories"
             title="Browse"
             className={styles.menu_item}
@@ -189,14 +201,14 @@ export default function SideMenu({
             </div>
           </Link>
           <Link
-            href="/create"
-            title="Create"
+            href="/search"
+            title="Search"
             className={styles.menu_item}
             onClick={linkClicked}
           >
             <div className={styles.item_content}>
-              <PencilIcon />
-              <span>Create</span>
+              <MagnifyingGlassIcon />
+              <span>Search</span>
             </div>
           </Link>
           {!user && (

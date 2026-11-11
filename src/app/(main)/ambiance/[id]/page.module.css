@@ -2,7 +2,8 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding-bottom: 24rem;
+  min-height: calc(100dvh - 0.8rem);
+  padding-bottom: 4rem;
 }
 
 .ambiance_maker_wrapper {

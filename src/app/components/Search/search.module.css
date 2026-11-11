@@ -1,0 +1,86 @@
+.search {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 2rem 0.8rem 16rem;
+  color: var(--grey-text);
+}
+
+.search.landing {
+  padding-top: 5vh;
+}
+
+.heading {
+  margin-bottom: 2rem;
+  font-family: var(--font-structural), sans-serif;
+  font-size: 3.2rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.8rem 4.8rem 1.2rem;
+  border-radius: 3.2rem;
+  background-color: rgb(50, 50, 50);
+}
+
+.message_wrapper {
+  margin-top: 12vh;
+}
+
+/* The rules below mirror the entries grid in pagination.module.css */
+.results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 180rem;
+  margin-top: 1.2rem;
+}
+
+.entries_wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: start;
+  margin-top: 1.8rem;
+}
+
+.entries_wrapper.loading {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in;
+}
+
+.entries_wrapper.mobile {
+  flex-direction: column;
+  flex-wrap: unset;
+  justify-content: unset;
+  align-items: center;
+}
+
+.entries_wrapper.one_item {
+  width: 100%;
+}
+
+.mobile .entry_container {
+  width: 100%;
+  justify-content: center;
+}
+
+.entry_container {
+  display: flex;
+  position: relative;
+  padding: 0.4rem;
+}
+
+.hidden {
+  opacity: 0;
+}
+
+@media screen and (max-width: 580px) {
+  .search.landing {
+    padding-top: 20vh;
+  }
+
+  .heading {
+    font-size: 3.2rem;
+  }
+}

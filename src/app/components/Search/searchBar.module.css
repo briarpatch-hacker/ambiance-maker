@@ -1,0 +1,85 @@
+.searchBar {
+  position: relative;
+  width: 100%;
+  max-width: 60rem;
+  height: 4.8rem;
+  flex-shrink: 0;
+}
+
+.searchForm {
+  display: flex;
+  height: 100%;
+}
+
+.searchForm input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 2.4rem 0 0 2.4rem;
+  padding: 0 1.2rem 0 2rem;
+  font-size: 1.8rem;
+  background-color: rgb(225, 225, 225);
+  color: rgb(20, 20, 20);
+}
+
+.searchForm input::placeholder {
+  color: rgb(90, 90, 90);
+}
+
+.searchForm button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  width: 6rem;
+  border: none;
+  border-radius: 0 2.4rem 2.4rem 0;
+  background-color: var(--primary-button-color);
+  cursor: pointer;
+}
+
+.searchForm button:hover {
+  filter: brightness(1.15);
+}
+
+.searchBar svg {
+  height: 2rem;
+  width: 2rem;
+  flex-shrink: 0;
+  fill: var(--grey-text);
+}
+
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 2rem;
+  width: calc(100% - 8rem);
+  list-style: none;
+  background: rgb(50, 50, 50);
+  border: 0.1rem solid rgb(100, 100, 100);
+  border-radius: 0 0 0.8rem 0.8rem;
+  overflow: hidden;
+  z-index: 10;
+  box-shadow: 0 0.8rem 1.6rem rgba(0, 0, 0, 0.25);
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  min-height: 4.4rem;
+  padding: 0.8rem 1.2rem;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  color: var(--grey-text);
+}
+
+.suggestion:hover,
+.suggestion[aria-selected="true"] {
+  background: rgb(75, 75, 75);
+}
+
+.suggestion svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}

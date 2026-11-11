@@ -1,5 +1,6 @@
 "use client";
 import AmbianceMaker from "@/app/components/Ambiance Maker/ambianceMaker";
+import RelatedAmbiances from "@/app/components/Related Ambiances/relatedAmbiances";
 import styles from "./page.module.css";
 import { AmbianceData } from "@/app/components/Ambiance Maker/ambianceMaker";
 import { useUser } from "@/app/contexts/userContext";
@@ -11,8 +12,6 @@ export default function AmbianceClient({
   ambianceData: AmbianceData;
 }) {
   const user = useUser();
-  // Aggregate page hit for daily_visitors; per-ambiance views are recorded
-  // server-side in page.tsx with their own 3-day dedup
   usePageView("ambiance");
 
   return (
@@ -24,6 +23,7 @@ export default function AmbianceClient({
           user={user}
         />
       </div>
+      {ambianceData.id && <RelatedAmbiances id={ambianceData.id} />}
     </div>
   );
 }

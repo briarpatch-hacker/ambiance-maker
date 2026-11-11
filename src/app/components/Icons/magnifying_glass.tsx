@@ -4,7 +4,7 @@ interface SvgProps {
   style?: React.CSSProperties;
 }
 
-const Pencil = ({ className, style }: SvgProps) => (
+const Icon = ({ className, style }: SvgProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     xmlSpace="preserve"
@@ -19,4 +19,4 @@ const Pencil = ({ className, style }: SvgProps) => (
   </svg>
 );
 
-export default Pencil;
+export default Icon;

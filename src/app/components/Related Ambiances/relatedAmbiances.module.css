@@ -1,0 +1,44 @@
+.related {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  row-gap: 1.8rem;
+  width: 100%;
+  margin-top: auto;
+  padding: 12rem 0.8rem 0;
+  color: var(--grey-text);
+  container-type: inline-size;
+}
+
+.heading {
+  font-family: var(--font-structural), sans-serif;
+  font-size: 2.4rem;
+  font-weight: 500;
+  text-align: center;
+  padding: 1.0rem 3.6rem 1.0rem;
+  border-radius: 3.2rem;
+  background-color: rgb(50, 50, 50);
+  align-self: flex-start;
+  width: 100%;
+}
+
+.entries {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8rem;
+  width: 100%;
+  max-width: 160rem;
+}
+
+.bottom_padding {
+  width: 100%;
+  height: 20rem;
+}
+
+/* Too narrow for one row of six: cap at three per row so no card is left alone */
+@container (max-width: 153.9rem) {
+  .entries {
+    max-width: 77rem;
+  }
+}
