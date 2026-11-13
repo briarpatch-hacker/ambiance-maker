@@ -117,7 +117,7 @@
 
 .active .option_content {
   background-color: rgb(120, 120, 120);
-  border-radius: 0.6rem;
+  border-radius: 0.2rem;
 }
 
 .sort_option.active .option_content {

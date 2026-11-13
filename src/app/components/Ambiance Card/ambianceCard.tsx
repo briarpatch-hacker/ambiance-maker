@@ -96,7 +96,7 @@ export default function AmbianceCard({
   description,
   ratingTotal,
   ratingCount,
-  datePublished,
+  // datePublished,
   dateUpdated,
   mode,
   style,
@@ -113,6 +113,7 @@ export default function AmbianceCard({
       className={classNames(styles.card_wrapper, {
         [styles.vertical]: mode === "vertical",
         [styles.horizontal]: mode === "horizontal",
+        [styles.draft]: linkTo === "draft",
       })}
     >
       <TooltipLink
@@ -171,7 +172,7 @@ export default function AmbianceCard({
                       </div>
                     )}
                 </div>
-                {datePublished && (
+                {/* {datePublished && (
                   <div className={styles.date}>
                     {datePublished.toLocaleDateString("en-US", {
                       month: "short",
@@ -179,19 +180,18 @@ export default function AmbianceCard({
                       year: "numeric",
                     })}
                   </div>
-                )}
-              </div>
-              {author && (
-                <div className={styles.byline}>
+                )} */}
+                {author && (
                   <Link
                     href={`/@${author}`}
                     className={styles.author_link}
                     aria-label={`Go to ${author}'s page`}
+                    title={author}
                   >
                     {author}
                   </Link>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ) : (
             <div className={styles.meta_wrapper}>

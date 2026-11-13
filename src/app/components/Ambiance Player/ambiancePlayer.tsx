@@ -57,6 +57,8 @@ export interface AmbiancePlayerHandle {
 interface PlayerSlot {
   // The YT.Player instance, or null if it hasn't been created / failed to load
   player: any;
+  // Same instance from the moment it's constructed, so unmount can destroy it before onReady
+  instance: any;
   // Previous startTime so we can reset the video when the user changes it
   prevStartTime: number | undefined;
   // Previous src so we can detect when the user swaps the link
@@ -87,6 +89,7 @@ interface PlayerSlot {
 
 const createSlot = (): PlayerSlot => ({
   player: null,
+  instance: null,
   prevStartTime: undefined,
   prevSrc: undefined,
   cuedVideoId: undefined,
@@ -426,14 +429,18 @@ export default React.memo(function AmbiancePlayer({
     if (apiReady) updateVideos();
   }, [videoData, apiReady]);
 
-  // Clears every timer on unmount so orphaned intervals can't keep writing state
+  // Clears timers and destroys players on unmount so nothing stays registered with the YouTube API
   useEffect(() => {
     return () => {
       slotsRef.current.forEach((slot) => {
         clearLoopTimeout(slot);
         if (slot.delayTimeout) clearTimeout(slot.delayTimeout);
         clearSyncInterval(slot);
+        try {
+          slot.instance?.destroy();
+        } catch {}
       });
+      slotsRef.current = [];
     };
   }, []);
 
@@ -540,8 +547,10 @@ export default React.memo(function AmbiancePlayer({
           // Add delay between player creations to prevent race conditions
           if (index > 0)
             await new Promise((resolve) => setTimeout(resolve, 200));
+          // Unmount swaps in a fresh slots array, so a mismatch means this loop is stale
+          if (slotsRef.current !== slots) return;
           try {
-            new window.YT.Player(playerId, {
+            slot.instance = new window.YT.Player(playerId, {
               height: "200px",
               width: "200px",
               videoId: videoId,

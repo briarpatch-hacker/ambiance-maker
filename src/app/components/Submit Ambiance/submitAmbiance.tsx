@@ -206,7 +206,7 @@ export default function SubmitAmbiance({
             <div>Polish your title and description</div>
           </h2>
           <p>
-            Your title should be clear and descriptive, something a first-time
+            Your title should be clear and descriptive, something a first time
             visitor would immediately understand. Use the description to set the
             scene and give your ambiance some context.
           </p>
