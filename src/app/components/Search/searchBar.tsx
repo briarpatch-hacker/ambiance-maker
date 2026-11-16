@@ -23,6 +23,7 @@ export default function SearchBar({
   const router = useRouter();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionRefs = useRef<(HTMLLIElement | null)[]>([]);
   const [value, setValue] = useState(query);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -118,6 +119,65 @@ export default function SearchBar({
               role="option"
               aria-selected={active === index}
               className={styles.suggestion}
+              tabIndex={-1}
+              ref={(element) => {
+                suggestionRefs.current[index] = element;
+              }}
+              onMouseEnter={() => suggestionRefs.current[index]?.focus()}
+              onFocus={() => setActive(index)}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  const nextIndex =
+                    event.key === "ArrowDown"
+                      ? (index + 1) % suggestions.length
+                      : (index + suggestions.length - 1) % suggestions.length;
+                  suggestionRefs.current[nextIndex]?.focus();
+                } else if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  search(word);
+                  inputRef.current?.focus();
+                } else if (event.key === "Escape") {
+                  event.preventDefault();
+                  setOpen(false);
+                  setActive(-1);
+                  inputRef.current?.focus();
+                } else if (
+                  !event.ctrlKey &&
+                  !event.metaKey &&
+                  !event.altKey &&
+                  (event.key.length === 1 ||
+                    event.key === "Backspace" ||
+                    event.key === "Delete")
+                ) {
+                  const input = inputRef.current;
+                  if (!input) return;
+                  event.preventDefault();
+                  let start = input.selectionStart ?? input.value.length;
+                  let end = input.selectionEnd ?? input.value.length;
+                  if (start === end && event.key === "Backspace") {
+                    start -=
+                      Array.from(input.value.slice(0, start)).pop()?.length ??
+                      0;
+                  } else if (start === end && event.key === "Delete") {
+                    end += Array.from(input.value.slice(end))[0]?.length ?? 0;
+                  }
+                  const replacement =
+                    event.key === "Backspace" || event.key === "Delete"
+                      ? ""
+                      : event.key.slice(
+                          0,
+                          Math.max(
+                            0,
+                            maxLength - input.value.length + end - start,
+                          ),
+                        );
+                  input.setRangeText(replacement, start, end, "end");
+                  setValue(input.value);
+                  setActive(-1);
+                  input.focus();
+                }
+              }}
               onPointerDown={(event) => event.preventDefault()}
               onClick={() => {
                 search(word);

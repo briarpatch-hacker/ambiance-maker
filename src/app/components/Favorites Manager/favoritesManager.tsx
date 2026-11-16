@@ -388,7 +388,11 @@ export default function FavoritesManager({
                   ratingCount={item.ratingCount}
                   datePublished={item.datePublished}
                   description={item.description}
-                  mode={entriesWidth <= 40 ? "horizontal" : "vertical"}
+                  mode={
+                    entriesWidth <= 40 && items.length > 1
+                      ? "horizontal"
+                      : "vertical"
+                  }
                   key={index}
                 />
               </div>

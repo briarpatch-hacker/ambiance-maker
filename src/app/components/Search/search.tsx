@@ -115,9 +115,15 @@ export default function Search({
       className={classNames(styles.search, { [styles.landing]: !query })}
       ref={containerRef}
     >
-      {!query && <h1 className={styles.heading}>Find the Perfect Sound</h1>}
-      <SearchBar key={query} query={query} words={suggestionWords} maxLength={maxQueryLength} />
-
+      <div className={styles.top_wrapper}>
+        {!query && <h1 className={styles.heading}>Find the Perfect Sound</h1>}
+        <SearchBar
+          key={query}
+          query={query}
+          words={suggestionWords}
+          maxLength={maxQueryLength}
+        />
+      </div>
       {query && isError ? (
         <div className={styles.message_wrapper}>
           <ExpectedError
@@ -164,7 +170,11 @@ export default function Search({
                     ratingCount={item.ratingCount}
                     datePublished={new Date(item.datePublished as Date)}
                     description={item.description}
-                    mode={entriesWidth <= 40 ? "horizontal" : "vertical"}
+                    mode={
+                      entriesWidth <= 40 && items.length > 1
+                        ? "horizontal"
+                        : "vertical"
+                    }
                   />
                 </div>
               );

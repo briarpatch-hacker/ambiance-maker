@@ -74,9 +74,16 @@
   color: var(--grey-text);
 }
 
-.suggestion:hover,
-.suggestion[aria-selected="true"] {
+.suggestion:focus-visible {
+  outline: unset;
+}
+
+.suggestion:hover {
   background: rgb(75, 75, 75);
+}
+
+.suggestion[aria-selected="true"] {
+  background: rgb(85, 85, 85);
 }
 
 .suggestion svg {

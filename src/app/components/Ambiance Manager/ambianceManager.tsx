@@ -458,7 +458,11 @@ export default function SelectionManager({
                     banner={
                       item.status === "submitted" ? "submitted" : undefined
                     }
-                    mode={entriesWidth <= 40 ? "horizontal" : "vertical"}
+                    mode={
+                      entriesWidth <= 40 && items.length > 1
+                        ? "horizontal"
+                        : "vertical"
+                    }
                     key={index}
                   />
                 </div>

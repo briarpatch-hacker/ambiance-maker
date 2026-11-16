@@ -21,7 +21,6 @@
   flex-direction: column;
   flex-wrap: wrap;
   color: var(--grey-text);
-  -webkit-text-fill-color: var(--grey-text);
   background: linear-gradient(
     to bottom right,
     rgb(40, 40, 40),
@@ -95,6 +94,7 @@
   font-size: 1.9rem;
   font-weight: 400;
   font-family: var(--font-interface);
+  color: var(--grey-text);
 }
 
 .author:hover,
