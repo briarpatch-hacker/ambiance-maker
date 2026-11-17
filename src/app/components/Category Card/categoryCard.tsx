@@ -13,6 +13,7 @@ export interface CategoryCardProps {
   imageAlt?: string;
   imageCredit?: string;
   imageStyle?: React.CSSProperties;
+  color?: string;
   style?: React.CSSProperties;
 }
 
@@ -25,6 +26,7 @@ export default function CategoryCard({
   imageAlt,
   imageCredit,
   imageStyle,
+  color,
   style,
 }: CategoryCardProps) {
   return (
@@ -34,7 +36,7 @@ export default function CategoryCard({
       style={{ ...style }}
       aria-label={`Go to the ${title} category.`}
     >
-      <h1>{title}</h1>
+      <h1 style={{ color }}>{title}</h1>
       <p className={styles.description}>{description}</p>
       <div className={styles.tags}>
         {tags.map((tag, index) => {

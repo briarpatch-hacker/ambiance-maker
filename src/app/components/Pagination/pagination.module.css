@@ -34,6 +34,12 @@
   background-color: rgb(50, 50, 50);
 }
 
+.pagination_header h1.has_category {
+  font-weight: 600;
+  letter-spacing: 2px;
+  padding: 0.8rem 1.8rem 1.2rem;
+}
+
 .current_page {
   font-weight: bolder;
   font-size: 2.8rem;

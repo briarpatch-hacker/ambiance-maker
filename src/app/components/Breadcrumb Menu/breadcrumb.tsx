@@ -14,6 +14,7 @@ interface BreadcrumbMenuProps {
 export type Breadcrumb = {
   title: string;
   href: string;
+  color?: string;
 };
 
 export default function BreadcrumbMenu({
@@ -42,6 +43,7 @@ export default function BreadcrumbMenu({
         const href = menu
           ? (item as Breadcrumb).href
           : `/${pathSegments.slice(0, index + 1).join("/")}`;
+        const color = menu ? (item as Breadcrumb).color : undefined;
         const numLinks = items.length - 1;
         return index === numLinks && !linkOnLast ? (
           <div
@@ -50,7 +52,7 @@ export default function BreadcrumbMenu({
             key={index}
             aria-current="page"
           >
-            {title}
+            <span style={{ color }}>{title}</span>
           </div>
         ) : (
           <div
@@ -58,7 +60,13 @@ export default function BreadcrumbMenu({
             style={{ transform: `translateY(${0.4 * index}rem)` }}
             key={index}
           >
-            <Link href={href}>{title}</Link>
+            <Link
+              href={href}
+              className={color ? styles.colored_link : undefined}
+              style={{ color }}
+            >
+              {title}
+            </Link>
             {index !== numLinks && <div className={styles.dash}>{`➥`}</div>}
           </div>
         );

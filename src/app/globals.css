@@ -14,6 +14,65 @@
   --dark-grey-text: rgb(175, 175, 175);
   --primary-button-color: rgb(105, 75, 135);
   --background-color: rgb(77, 73, 84);
+
+  /* Category text colors, assigned in lib/categories.ts */
+  --cat-moods: rgb(238, 182, 196);
+  --cat-relaxing: rgb(190, 220, 230);
+  --cat-upbeat: rgb(240, 225, 150);
+  --cat-zen: rgb(195, 212, 180);
+  --cat-melancholic: rgb(170, 182, 210);
+  --cat-chaotic: rgb(245, 170, 155);
+  --cat-dark: rgb(180, 162, 192);
+  --cat-liminal: rgb(215, 230, 165);
+
+  --cat-rooms: rgb(222, 172, 118);
+  --cat-cafe: rgb(228, 190, 148);
+  --cat-library: rgb(238, 216, 165);
+  --cat-office: rgb(215, 212, 200);
+  --cat-lounge: rgb(234, 176, 152);
+  --cat-tavern: rgb(238, 195, 130);
+  --cat-manor: rgb(165, 195, 170);
+
+  --cat-musical: rgb(236, 214, 120);
+  --cat-lo-fi: rgb(242, 196, 172);
+  --cat-jazz: rgb(174, 195, 240);
+  --cat-instrumental: rgb(240, 226, 185);
+  --cat-electronic: rgb(160, 225, 235);
+  --cat-alternative: rgb(192, 168, 232);
+
+  --cat-white-noise: var(--grey-text);
+
+  --cat-nature: rgb(150, 220, 160);
+  --cat-forest: rgb(125, 200, 140);
+  --cat-meadows: rgb(228, 230, 142);
+  --cat-rivers: rgb(152, 212, 218);
+  --cat-coastline: rgb(155, 207, 240);
+  --cat-wilderness: rgb(228, 192, 138);
+
+  --cat-weather: rgb(150, 195, 245);
+  --cat-rain: rgb(130, 180, 240);
+  --cat-wind: rgb(200, 225, 230);
+  --cat-snow: rgb(228, 238, 245);
+
+  --cat-seasonal: rgb(246, 217, 172);
+  --cat-spring: rgb(185, 225, 175);
+  --cat-summer: rgb(242, 225, 145);
+  --cat-autumn: rgb(215, 150, 105);
+  --cat-winter: rgb(225, 235, 245);
+  --cat-halloween: rgb(245, 165, 95);
+  --cat-christmas: rgb(140, 200, 165);
+
+  --cat-urban: rgb(245, 165, 135);
+  --cat-city-streets: rgb(238, 170, 142);
+  --cat-suburbia: rgb(212, 196, 150);
+  --cat-transit: rgb(160, 180, 215);
+  --cat-industrial: rgb(225, 165, 135);
+
+  --cat-world: rgb(160, 220, 215);
+  --cat-activities: rgb(247, 184, 108);
+  --cat-ethereal: rgb(198, 168, 248);
+  --cat-surreal: rgb(240, 160, 220);
+  --cat-experimental: rgb(215, 232, 140);
 }
 
 /* Elements */

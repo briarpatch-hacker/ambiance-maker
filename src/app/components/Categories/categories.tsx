@@ -63,12 +63,21 @@ export default function CategoriesPage({ slug }: CategoriesPageProps) {
   // Build breadcrumb with proper casing from category key names
   const breadcrumbMenu: Breadcrumb[] = [
     { title: "Categories", href: "/categories" },
-    ...(catName ? [{ title: catName, href: `/categories/${catSlug}` }] : []),
+    ...(catName
+      ? [
+          {
+            title: catName,
+            href: `/categories/${catSlug}`,
+            color: categoryMeta[catName]?.color,
+          },
+        ]
+      : []),
     ...(subcatName
       ? [
           {
             title: subcatName,
             href: `/categories/${catSlug}/${subcatSlug}`,
+            color: categoryMeta[subcatName]?.color,
           },
         ]
       : []),
@@ -84,7 +93,7 @@ export default function CategoriesPage({ slug }: CategoriesPageProps) {
         )}
         {displayKeys.length > 0 && (
           <div className={styles.header}>
-            <h1>{heading}</h1>
+            <h1 style={{ color: categoryMeta[heading]?.color }}>{heading}</h1>
           </div>
         )}
         {displayKeys.length > 0 ? (
@@ -112,6 +121,7 @@ export default function CategoriesPage({ slug }: CategoriesPageProps) {
                     imageAlt={alt}
                     imageCredit={imageCredit}
                     imageStyle={meta.imageStyle}
+                    color={meta.color}
                   />
                 </div>
               );
@@ -120,6 +130,7 @@ export default function CategoriesPage({ slug }: CategoriesPageProps) {
         ) : (
           <Pagination
             title={heading}
+            titleColor={categoryMeta[heading]?.color}
             collection={String(categoryMeta[heading]?.id)}
             containerRef={componentRef}
           />

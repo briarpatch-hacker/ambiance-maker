@@ -33,13 +33,14 @@
   display: flex;
   align-items: center;
   font-size: 3rem;
-  font-weight: 700;
+  font-weight: 600;
   font-family: var(--font-structural), sans-serif;
   color: var(--grey-text);
   border-radius: 1.6rem;
   background-color: rgb(50, 50, 50);
   max-width: calc(100% - 6rem);
   overflow-x: auto;
+  letter-spacing: 2;
 }
 
 .header h1::-webkit-scrollbar {

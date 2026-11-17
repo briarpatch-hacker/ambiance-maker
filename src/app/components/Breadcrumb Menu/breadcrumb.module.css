@@ -33,6 +33,10 @@
   text-decoration-thickness: 0.1rem;
 }
 
+.breadcrumb a.colored_link:hover {
+  filter: brightness(1.05);
+}
+
 .dash {
   font-weight: bolder;
   transform: translateY(0.4rem);

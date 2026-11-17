@@ -60,7 +60,7 @@ export interface AmbianceData {
   description?: string;
   thumbnail?: string;
   status?: "draft" | "submitted" | "published";
-  category?: { name: string; href: string };
+  category?: { name: string; href: string; color?: string };
   videoData: VideoData[];
 }
 
@@ -483,6 +483,7 @@ export default function AmbianceMaker({
                     <Link
                       href={ambianceData.category.href}
                       className={styles.category}
+                      style={{ color: ambianceData.category.color }}
                     >
                       {ambianceData.category.name}
                     </Link>

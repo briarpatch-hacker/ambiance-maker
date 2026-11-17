@@ -30,6 +30,7 @@
   border-radius: 3.2rem;
   background-color: rgb(50, 50, 50);
   align-self: flex-start;
+  letter-spacing: 1px;
 }
 
 .message_wrapper {

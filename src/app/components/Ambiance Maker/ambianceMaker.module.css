@@ -105,6 +105,10 @@
   text-decoration-thickness: 0.1rem;
 }
 
+.category:hover {
+  filter: brightness(1.06);
+}
+
 .metadata_wrapper {
   display: flex;
   justify-content: space-between;

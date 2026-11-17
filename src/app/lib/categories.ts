@@ -72,6 +72,7 @@ export type CategoryImage = {
 
 export type CategoryMeta = {
   id: number;
+  color: string;
   description: string;
   tags: string[];
   image: CategoryImage;
@@ -85,6 +86,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Moods (100s)
   Moods: {
     id: 100,
+    color: "var(--cat-moods)",
     description:
       "Ambiances that span every mood, from meditative stillness to productive chaos.",
     tags: ["relaxing", "upbeat", "melancholic", "chaotic"],
@@ -98,6 +100,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Relaxing: {
     id: 110,
+    color: "var(--cat-relaxing)",
     description: "Comfortable, gentle sounds for unwinding and decompressing.",
     tags: ["tranquil", "serene", "gentle"],
     image: {
@@ -111,6 +114,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Upbeat: {
     id: 120,
+    color: "var(--cat-upbeat)",
     description:
       "Lively, energetic sounds that keep momentum and lift your mood.",
     tags: ["energetic", "bright", "motivated"],
@@ -125,6 +129,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Zen: {
     id: 130,
+    color: "var(--cat-zen)",
     description:
       "Intentionally still and focused ambiance for meditation and deep work.",
     tags: ["meditative", "mindful", "contemplative"],
@@ -139,6 +144,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Melancholic: {
     id: 140,
+    color: "var(--cat-melancholic)",
     description:
       "Bittersweet, reflective sounds that sit comfortably with quiet sadness.",
     tags: ["somber", "wistful", "introspective"],
@@ -153,6 +159,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Chaotic: {
     id: 150,
+    color: "var(--cat-chaotic)",
     description:
       "A wash of competing sounds pulling in every direction. The kind of noise certain minds need to settle in and work.",
     tags: ["frenetic", "layered", "cacophony"],
@@ -167,6 +174,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Dark: {
     id: 160,
+    color: "var(--cat-dark)",
     description:
       "Weighty, oppressive atmospheres for those drawn to the darker side of sound.",
     tags: ["ominous", "haunting", "foreboding"],
@@ -181,6 +189,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Liminal: {
     id: 170,
+    color: "var(--cat-liminal)",
     description:
       "Sounds from places that feel slightly out of time. Empty and familiar, but somehow not quite right.",
     tags: ["adrift", "vacant", "nowhere"],
@@ -195,6 +204,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   "Other Moods": {
     id: 180,
+    color: "var(--cat-moods)",
     description:
       "Moods without a named category. Feelings that sit between the others, or outside them entirely.",
     tags: ["nostalgic", "emotional", "yearning"],
@@ -211,6 +221,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Rooms (200s)
   Rooms: {
     id: 200,
+    color: "var(--cat-rooms)",
     description:
       "Indoor settings ranging from cozy reading nooks to functional workspaces.",
     tags: ["cafe", "library", "office", "lounge", "manor"],
@@ -225,6 +236,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Cafe: {
     id: 210,
+    color: "var(--cat-cafe)",
     description:
       "The warm clatter of a coffee shop. Espresso machines, soft conversation, and background music.",
     tags: ["espresso", "steam", "morning"],
@@ -238,6 +250,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Library: {
     id: 220,
+    color: "var(--cat-library)",
     description:
       "The rustle of pages, distant footsteps on hardwood, and the focused hush of a reading room.",
     tags: ["studious", "quiet", "tomes"],
@@ -252,6 +265,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Office: {
     id: 230,
+    color: "var(--cat-office)",
     description:
       "The sounds of getting work done. Keyboards, computer hum, and the low level background that helps you focus.",
     tags: ["productivity", "focus"],
@@ -266,6 +280,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Lounge: {
     id: 240,
+    color: "var(--cat-lounge)",
     description:
       "Dim lighting, cocktails, and the unhurried murmur of sophisticated company.",
     tags: ["mellow", "refined"],
@@ -279,6 +294,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Tavern: {
     id: 250,
+    color: "var(--cat-tavern)",
     description:
       "Old drinking halls and inns filled with chatter, clinking glasses, and fireside warmth.",
     tags: ["medieval", "rustic", "lively"],
@@ -293,6 +309,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Manor: {
     id: 260,
+    color: "var(--cat-manor)",
     description:
       "Old castles and manor houses. Crackling fires, ticking clocks, stone corridors, and rain lashed windows.",
     tags: ["solitary", "hushed", "gothic"],
@@ -307,6 +324,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   "Other Rooms": {
     id: 270,
+    color: "var(--cat-rooms)",
     description:
       "Indoor spaces that aren't quite like the others. Hallways, quiet corners, and personal spaces.",
     tags: ["interior", "secluded", "personal"],
@@ -323,6 +341,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Musical (300s)
   Musical: {
     id: 300,
+    color: "var(--cat-musical)",
     description:
       "Layered beats, live instruments, and synthesized sounds woven together into a single mix.",
     tags: ["melodic", "rhythmic", "immersive"],
@@ -337,6 +356,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   "Lo-fi": {
     id: 310,
+    color: "var(--cat-lo-fi)",
     description:
       "Beats that stay in the background and let you think. Unhurried and slightly muted, built for long sessions of focused work.",
     tags: ["chill", "mellow", "understated"],
@@ -351,6 +371,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Jazz: {
     id: 320,
+    color: "var(--cat-jazz)",
     description:
       "Upright bass, brushed drums, and saxophone. The calm sophistication of a live performance late at night.",
     tags: ["sophisticated", "smooth", "late night"],
@@ -365,6 +386,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Instrumental: {
     id: 330,
+    color: "var(--cat-instrumental)",
     description:
       "Solo instruments and ensembles. Piano, strings, and music built around the instrument alone.",
     tags: ["piano", "acoustic", "orchestral"],
@@ -379,6 +401,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Electronic: {
     id: 340,
+    color: "var(--cat-electronic)",
     description:
       "Synthesizers, pulsing beats, and layered textures. From lo-fi retrofuture to full electronic production.",
     tags: ["synth", "vaporwave", "hypnotic"],
@@ -393,6 +416,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Alternative: {
     id: 350,
+    color: "var(--cat-alternative)",
     description:
       "Quiet and textured to raw and loud. Indie, shoegaze, and the harder sounds.",
     tags: ["post-rock", "dream pop", "grunge", "punk"],
@@ -407,6 +431,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   "Other Music": {
     id: 360,
+    color: "var(--cat-musical)",
     description:
       "Country, folk, soul, pop, or anything else that didn't get its own category.",
     tags: ["timeless", "traditional", "modern"],
@@ -422,6 +447,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // White Noise (400)
   "White Noise": {
     id: 400,
+    color: "var(--cat-white-noise)",
     description:
       "Pure, consistent tones designed for focus, sleep, and tuning out the world.",
     tags: ["hums", "tones"],
@@ -437,6 +463,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Nature (500s)
   Nature: {
     id: 500,
+    color: "var(--cat-nature)",
     description:
       "Wildlife, water, and open land. The sounds of the natural world at its most uninterrupted.",
     tags: ["forest", "meadows", "rivers", "coastline"],
@@ -451,6 +478,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Forest: {
     id: 510,
+    color: "var(--cat-forest)",
     description:
       "The layered sound of old growth, temperate or tropical. Rustling canopy, distant calls, and the deep quiet within.",
     tags: ["woodland", "jungle", "birdsong"],
@@ -465,6 +493,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Meadows: {
     id: 520,
+    color: "var(--cat-meadows)",
     description:
       "Open fields and gentle countryside. Soft wind, animals, insects, and the unhurried pace of open land.",
     tags: ["grassland", "savannah", "countryside"],
@@ -479,6 +508,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Rivers: {
     id: 530,
+    color: "var(--cat-rivers)",
     description:
       "The sound of moving freshwater, from gentle murmurs to the roar of a cascade.",
     tags: ["watefalls", "brooks", "marshes"],
@@ -493,6 +523,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Coastline: {
     id: 540,
+    color: "var(--cat-coastline)",
     description:
       "Waves breaking on rock and sand, salt air, and the call of seagulls. From a quiet cove to the open sea.",
     tags: ["waves", "shore", "beach"],
@@ -507,6 +538,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Wilderness: {
     id: 550,
+    color: "var(--cat-wilderness)",
     description:
       "Remote, extreme environments far from the familiar. Vast, sparse, and indifferent.",
     tags: ["desert", "mountains", "tundra", "caves"],
@@ -523,6 +555,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Weather (600s)
   Weather: {
     id: 600,
+    color: "var(--cat-weather)",
     description:
       "Rain, wind, and snow. From a light drizzle to a full winter storm.",
     tags: ["rain", "wind", "snow"],
@@ -537,6 +570,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Rain: {
     id: 610,
+    color: "var(--cat-rain)",
     description:
       "A soft patter on glass, a steady rainfall, or the full weight of a thunderstorm.",
     tags: ["drizzle", "storm", "thunder"],
@@ -550,6 +584,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Wind: {
     id: 620,
+    color: "var(--cat-wind)",
     description:
       "Air in motion. From a gentle rustle through leaves to a howling gale.",
     tags: ["gust", "breeze", "howling"],
@@ -564,6 +599,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Snow: {
     id: 630,
+    color: "var(--cat-snow)",
     description:
       "The world under snowfall. Muffled sounds, crunching underfoot, and a rare, deep silence.",
     tags: ["blizzard", "winter", "frost"],
@@ -580,6 +616,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Seasonal (700s)
   Seasonal: {
     id: 700,
+    color: "var(--cat-seasonal)",
     description: "The sounds of each season and the holidays that shape them.",
     tags: ["spring", "autumn", "halloween", "christmas"],
     image: {
@@ -593,6 +630,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Spring: {
     id: 710,
+    color: "var(--cat-spring)",
     description:
       "Fresh breezes, returning birdsong, and soft rain after a long winter.",
     tags: ["renewal", "awakening"],
@@ -606,6 +644,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Summer: {
     id: 720,
+    color: "var(--cat-summer)",
     description:
       "Hot afternoons, insects at dusk, and evenings that don't want to end.",
     tags: ["sunny", "porch", "cicadas"],
@@ -620,6 +659,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Autumn: {
     id: 730,
+    color: "var(--cat-autumn)",
     description:
       "Crisp air, falling leaves, and wood smoke in a forest turning amber and crimson.",
     tags: ["leaves", "harvest", "bonfire"],
@@ -634,6 +674,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Winter: {
     id: 740,
+    color: "var(--cat-winter)",
     description:
       "Frozen landscapes and the deep quiet of snow. Cold air, bare trees, and long nights.",
     tags: ["cold", "snowfall", "stillness"],
@@ -648,6 +689,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Halloween: {
     id: 750,
+    color: "var(--cat-halloween)",
     description:
       "Creaking doors, distant howls, jack-o-lanterns. The unsettling edge of the year's darkest night.",
     tags: ["spooky", "haunted", "macabre"],
@@ -662,6 +704,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Christmas: {
     id: 760,
+    color: "var(--cat-christmas)",
     description:
       "Crackling fires, ringing bells, and carols on the cold night air. The hush and warmth of the Christmas season.",
     tags: ["festive", "carols", "fireside", "yuletide"],
@@ -676,6 +719,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   "Other Holidays": {
     id: 770,
+    color: "var(--cat-seasonal)",
     description:
       "Solstice gatherings, harvest festivals, and midsummer celebrations. Every holiday that doesn't have its own category.",
     tags: ["fireworks", "festivals", "celebration", "solstice"],
@@ -692,6 +736,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Urban (800s)
   Urban: {
     id: 800,
+    color: "var(--cat-urban)",
     description:
       "Civilization in motion. Crowded streets, quiet corners, and the hum of infrastructure.",
     tags: ["city", "suburbia", "transit", "industrial"],
@@ -706,6 +751,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   "City Streets": {
     id: 810,
+    color: "var(--cat-city-streets)",
     description:
       "The full intensity of city life. Sirens, street vendors, bus engines, and the constant motion of people.",
     tags: ["traffic", "crowds", "downtown"],
@@ -720,6 +766,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Suburbia: {
     id: 820,
+    color: "var(--cat-suburbia)",
     description:
       "The unhurried sounds of residential life. Lawn mowers, dogs barking, distant voices, and occasional traffic.",
     tags: ["neighborhood", "residential", "quiet"],
@@ -733,6 +780,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Transit: {
     id: 830,
+    color: "var(--cat-transit)",
     description:
       "The sounds of moving through the world. Rumbling carriages, echoing platforms, and the rhythm of a commute.",
     tags: ["train", "bus", "commute"],
@@ -747,6 +795,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   },
   Industrial: {
     id: 840,
+    color: "var(--cat-industrial)",
     description:
       "The rhythmic noise of large-scale production. Metalwork, steam, equipment, and the hum of infrastructure.",
     tags: ["machinery", "factory"],
@@ -763,6 +812,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // World (900)
   World: {
     id: 900,
+    color: "var(--cat-world)",
     description:
       "Ambiance only heard in one particular corner of the globe. Sounds tied to specific cultures, regions, or historical periods.",
     tags: ["cultural", "regional"],
@@ -779,6 +829,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Activities (1000)
   Activities: {
     id: 1000,
+    color: "var(--cat-activities)",
     description:
       "Ambiances defined by what you're doing. From the gym to the kitchen, the workshop to the study.",
     tags: ["sports", "gym", "cooking", "crafts"],
@@ -794,6 +845,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Ethereal (1100)
   Ethereal: {
     id: 1100,
+    color: "var(--cat-ethereal)",
     description:
       "Temple bells, abbey choirs, and a lingering reverb carrying a sense of the sacred and transcendent.",
     tags: ["mystical", "transcendent", "spiritual"],
@@ -810,6 +862,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Surreal (1200)
   Surreal: {
     id: 1200,
+    color: "var(--cat-surreal)",
     description:
       "Sounds that exist outside ordinary experience. Vast, weightless, and impossible to place.",
     tags: ["abstract", "otherworldly", "cosmic", "underwater"],
@@ -826,6 +879,7 @@ export const categoryMeta: Record<string, CategoryMeta> = {
   // Experimental (1300)
   Experimental: {
     id: 1300,
+    color: "var(--cat-experimental)",
     description:
       "Ambiances that don't fit anywhere else. Some are unconventional by design, others simply resist categorization.",
     tags: ["unique", "unconventional"],
@@ -868,10 +922,12 @@ function getCategoryHref(name: string): string {
   );
 }
 
-export const categoryById: Record<number, { name: string; href: string }> =
-  Object.fromEntries(
-    Object.entries(categoryMeta).map(([name, meta]) => [
-      meta.id,
-      { name, href: getCategoryHref(name) },
-    ]),
-  );
+export const categoryById: Record<
+  number,
+  { name: string; href: string; color: string }
+> = Object.fromEntries(
+  Object.entries(categoryMeta).map(([name, meta]) => [
+    meta.id,
+    { name, href: getCategoryHref(name), color: meta.color },
+  ]),
+);

@@ -11,10 +11,12 @@ import ExpectedError from "@/app/components/Errors/Expected Error/errorExpected"
 
 export default function Pagination({
   title,
+  titleColor,
   collection,
   containerRef,
 }: {
   title: string;
+  titleColor?: string;
   collection: string;
   containerRef: React.RefObject<HTMLElement | null>;
 }) {
@@ -286,7 +288,12 @@ export default function Pagination({
   return isError ? (
     <div className={styles.pagination}>
       <div className={styles.pagination_header}>
-        <h1>{title}</h1>
+        <h1
+          style={{ color: titleColor }}
+          className={classNames({ [styles.has_category]: titleColor })}
+        >
+          {title}
+        </h1>
         <div className={styles.options_container}>
           {sortOptions()}
           {sizeOptions()}
@@ -309,7 +316,12 @@ export default function Pagination({
       ref={componentRef}
     >
       <div className={styles.pagination_header}>
-        <h1>{title}</h1>
+        <h1
+          style={{ color: titleColor }}
+          className={classNames({ [styles.has_category]: titleColor })}
+        >
+          {title}
+        </h1>
         <div className={styles.options_container}>
           {sortOptions()}
           {sizeOptions()}
