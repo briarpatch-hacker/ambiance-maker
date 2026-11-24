@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/app/lib/supabase/admin";
+import { createClient } from "@/app/lib/supabase/server";
 import { cookies } from "next/headers";
 
 /**
@@ -23,7 +24,8 @@ export async function getCurrentUser() {
     const sessionId = cookieStore.get("sessionId")?.value;
     if (!sessionId) return null;
 
-    const supabase = createAdminClient();
+    const isDev = process.env.NODE_ENV === "development";
+    const supabase = isDev ? createAdminClient() : createClient(cookies());
     const { data: session, error: sessionError } = await supabase
       .from("sessions")
       .select("user_id, last_active")
@@ -57,7 +59,8 @@ export async function getUserId(): Promise<string | null> {
     const sessionId = cookieStore.get("sessionId")?.value;
     if (!sessionId) return null;
 
-    const supabase = createAdminClient();
+    const isDev = process.env.NODE_ENV === "development";
+    const supabase = isDev ? createAdminClient() : createClient(cookies());
     const { data: session, error } = await supabase
       .from("sessions")
       .select("user_id, last_active")

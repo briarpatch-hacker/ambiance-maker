@@ -4,7 +4,9 @@ import AmbianceMaker from "@/app/components/Ambiance Maker/ambianceMaker";
 import styles from "./page.module.css";
 import { redirect, notFound } from "next/navigation";
 import { AmbianceData } from "@/app/components/Ambiance Maker/ambianceMaker";
+import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
+import { cookies } from "next/headers";
 import { getUserId, getCurrentUser } from "@/app/lib/auth/getCurrentUser";
 
 interface PageProps {
@@ -18,7 +20,8 @@ const getDraft = cache(async (
   ambianceData: AmbianceData;
   status: "draft" | "submitted";
 } | null> => {
-  const supabase = createAdminClient();
+  const isDev = process.env.NODE_ENV === "development";
+  const supabase = isDev ? createAdminClient() : createClient(cookies());
 
   const { data: ambiance, error } = await supabase
     .from("ambiances")

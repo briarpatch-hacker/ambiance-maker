@@ -112,7 +112,6 @@ export default function TooltipLink({
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     setClosing(false);
     setActive(true);
   }
@@ -145,37 +144,18 @@ export default function TooltipLink({
     }, closingTime);
   }
 
-  function isFocusVisible() {
-    return (
-      focusable &&
-      (childrenRef.current?.matches(":focus-visible") ||
-        !!childrenRef.current?.querySelector(":focus-visible"))
-    );
-  }
-
-  function handleFocus() {
-    if (isFocusVisible()) {
+  //Adds the tooltip if the child element is focused or hovered over, removes otherwise
+  function updateTooltipStatus() {
+    const isFocused = focusable
+      ? childrenRef.current?.matches(":focus-visible") ||
+        !!childrenRef.current?.querySelector(":focus-visible")
+      : false;
+    const isHovered = childrenRef.current?.matches(":hover");
+    if (isFocused || isHovered) {
       addTooltip();
-    }
-  }
-
-  function handleBlur() {
-    if (!childrenRef.current?.matches(":hover")) {
+    } else {
       removeTooltip();
     }
-  }
-
-  function handleMouseLeave() {
-    if (!isFocusVisible()) {
-      removeTooltip();
-    }
-  }
-
-  function handleClick() {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setActive(false);
-    setClosing(false);
   }
 
   //Calculate the position for the tooltip to appear
@@ -369,12 +349,11 @@ export default function TooltipLink({
       href={href}
       target={target}
       ref={childrenRef}
-      onFocus={focusable ? handleFocus : undefined}
-      onBlur={focusable ? handleBlur : undefined}
+      onFocus={focusable ? updateTooltipStatus : undefined}
+      onBlur={focusable ? updateTooltipStatus : undefined}
       onMouseEnter={resetHoverDelay}
       onMouseMove={resetHoverDelay}
-      onMouseLeave={handleMouseLeave}
-      onClick={handleClick}
+      onMouseLeave={updateTooltipStatus}
       className={styles.expandable}
       aria-describedby={tooltipId}
     >

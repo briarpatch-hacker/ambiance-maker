@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { cookies } from "next/headers";
 
@@ -10,7 +11,8 @@ export async function GET(req: NextRequest) {
   try {
     const cookieStore = await cookies();
     const sessionId = cookieStore.get("sessionId")?.value;
-    const supabase = createAdminClient();
+    const isDev = process.env.NODE_ENV === "development";
+    const supabase = isDev ? createAdminClient() : createClient(cookies());
 
     const { data: session, error: sessionError } = await supabase
       .from("sessions")

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
+import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
+import { cookies } from "next/headers";
 import UsernameClient, { InitialOwnerData } from "./client";
 import { getCurrentUser } from "@/app/lib/auth/getCurrentUser";
 
@@ -13,7 +15,8 @@ async function getOwnerInitialData(
   username: string,
 ): Promise<InitialOwnerData | null> {
   try {
-    const supabase = createAdminClient();
+    const isDev = process.env.NODE_ENV === "development";
+    const supabase = isDev ? createAdminClient() : createClient(cookies());
     const pageSize = 40;
 
     const { data: user } = await supabase
@@ -67,7 +70,8 @@ async function getOwnerInitialData(
 // Checks if the username exists, if they have publihed ambiance, and returns it with correct uppercase/lowercases if it does
 const getUsername = cache(
   async (username: string): Promise<string | undefined> => {
-    const supabase = createAdminClient();
+    const isDev = process.env.NODE_ENV === "development";
+    const supabase = isDev ? createAdminClient() : createClient(cookies());
     const { data, error } = await supabase
       .from("users")
       .select("username, id")

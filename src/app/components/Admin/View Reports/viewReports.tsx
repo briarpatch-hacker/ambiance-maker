@@ -2,7 +2,6 @@
 import React, { useState, useEffect, JSX } from "react";
 import Link from "next/link";
 import styles from "./viewReports.module.css";
-import paginationStyles from "@/app/components/Pagination/pagination.module.css";
 import classNames from "classnames";
 import { useSearchParams, usePathname } from "next/navigation";
 import Button from "@/app/components/Buttons/Button Set/button";
@@ -128,7 +127,7 @@ export default function ViewReports() {
         <Link
           href={`${queryString}`}
           key={key}
-          className={className}
+          className={styles[className || ``]}
           aria-label={ariaLabel ? ariaLabel : `Go to page ${targetPage}`}
         >
           {text}
@@ -145,14 +144,14 @@ export default function ViewReports() {
 
     if (page > 1) {
       menuArr.push(
-        menuLink("<", page - 1, "left-arrow", paginationStyles.arrow, "Previous page"),
+        menuLink("<", page - 1, "left-arrow", "arrow", "Previous page"),
       );
     }
     if (page > 1 + range && numPages > 2 * range + 1) {
       menuArr.push(menuLink("1", 1, "page-1"));
       if (startPage > 2) {
         menuArr.push(
-          <div className={paginationStyles.ellipsis} key="left-ellipsis" aria-hidden>
+          <div className={styles.ellipsis} key="left-ellipsis" aria-hidden>
             ...
           </div>,
         );
@@ -162,7 +161,7 @@ export default function ViewReports() {
       i === page
         ? menuArr.push(
             <div
-              className={paginationStyles.current_page}
+              className={styles.current_page}
               key={`page-${page}`}
               aria-current="page"
             >
@@ -174,7 +173,7 @@ export default function ViewReports() {
     if (page < numPages - range && numPages > 2 * range + 1) {
       if (endPage < numPages - 1) {
         menuArr.push(
-          <div className={paginationStyles.ellipsis} key="right-ellipsis" aria-hidden>
+          <div className={styles.ellipsis} key="right-ellipsis" aria-hidden>
             ...
           </div>,
         );
@@ -183,11 +182,11 @@ export default function ViewReports() {
     }
     if (page < numPages) {
       menuArr.push(
-        menuLink(">", page + 1, "right-arrow", paginationStyles.arrow, "Next Page"),
+        menuLink(">", page + 1, "right-arrow", "arrow", "Next Page"),
       );
     }
     return (
-      <nav className={paginationStyles.pagination_menu} aria-label="Pagination">
+      <nav className={styles.pagination_menu} aria-label="Pagination">
         {menuArr}
       </nav>
     );

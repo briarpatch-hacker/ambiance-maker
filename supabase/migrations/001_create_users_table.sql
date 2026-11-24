@@ -95,8 +95,13 @@ $$ LANGUAGE plpgsql;
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
--- No direct access via public client: a SELECT policy would expose email and google_id
+-- Anyone can view user profiles (public)
 DROP POLICY IF EXISTS "Anyone can view user profiles" ON users;
+CREATE POLICY "Anyone can view user profiles"
+  ON users FOR SELECT
+  USING (true);
+
+-- No direct insert/update/delete via public client (all handled by admin client)
 
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 
