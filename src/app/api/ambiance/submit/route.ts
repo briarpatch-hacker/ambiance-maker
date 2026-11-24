@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { randomString } from "@/app/lib/randomString";
-import { cookies } from "next/headers";
 import {
   submitAmbianceSchema,
   getVideoId,
@@ -15,11 +13,7 @@ import { getUserId } from "@/app/lib/auth/getCurrentUser";
 // Submits the video for publication
 export async function POST(req: NextRequest) {
   try {
-    const isDev = process.env.NODE_ENV === "development";
-    const cookieStore = cookies();
-
-    // In dev, use admin client to bypass RLS; in prod, use regular client
-    const supabase = isDev ? createAdminClient() : createClient(cookieStore);
+    const supabase = createAdminClient();
 
     // Get authenticated user
     const userId = await getUserId();
@@ -253,9 +247,7 @@ export async function POST(req: NextRequest) {
 // Lightweight pre-check: returns whether the user can submit
 export async function GET(req: NextRequest) {
   try {
-    const isDev = process.env.NODE_ENV === "development";
-    const cookieStore = cookies();
-    const supabase = isDev ? createAdminClient() : createClient(cookieStore);
+    const supabase = createAdminClient();
 
     const userId = await getUserId();
     if (!userId) {

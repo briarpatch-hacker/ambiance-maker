@@ -20,6 +20,12 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Reports Database Setup
+
+Apply all migrations in numeric order when creating the database. `supabase/migrations/003_create_reports_table.sql` includes the pending-only report limit and the service-role-only `submit_ambiance_report` function required by the report API. Existing development databases using the old reports schema must be reset and recreated to pick up this rewritten migration; rerunning it over an existing reports table will not upgrade that table. A reset deletes existing data.
+
+Each user can have one pending report per ambiance. Resubmitting replaces its type and message, even at the five-pending-report cap. Dismissed and resolved reports remain in history and do not block new reports. Shadowbanned submissions and new reports over the cap still return success without being saved.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

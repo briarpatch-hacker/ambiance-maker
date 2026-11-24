@@ -26,9 +26,11 @@ export default function Search({
   maxQueryLength: number;
   suggestionWords: string[];
 }) {
-  // null until a search has completed
-  const [items, setItems] = useState<AmbianceCardProps[] | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // null keeps the landing view visible when starting without a query
+  const [items, setItems] = useState<AmbianceCardProps[] | null>(() =>
+    query ? [] : null,
+  );
+  const [isLoading, setIsLoading] = useState(Boolean(query));
   const [isError, setIsError] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [entriesWidth, setEntriesWidth] = useState(INITIAL_ENTRIES_WIDTH);
@@ -110,13 +112,18 @@ export default function Search({
     return () => observer.disconnect();
   }, [calcEntriesWidth]);
 
+  const decorativeCards = useRef(Array.from({ length: 8 }));
+
   return (
     <div
-      className={classNames(styles.search, { [styles.landing]: !query })}
+      className={classNames(styles.search, {
+        [styles.landing]: !items,
+        [styles.query]: query,
+      })}
       ref={containerRef}
     >
       <div className={styles.top_wrapper}>
-        {!query && <h1 className={styles.heading}>Find the Perfect Sound</h1>}
+        {!items && <h1 className={styles.heading}>Find the Perfect Sound</h1>}
         <SearchBar
           key={query}
           query={query}
@@ -124,6 +131,18 @@ export default function Search({
           maxLength={maxQueryLength}
         />
       </div>
+      {!items && (
+        <div className={styles.decorative_cards_wrapper}>
+          {decorativeCards.current.map((card, index) => {
+            return (
+              <div
+                key={`decorative-card-${index}`}
+                className={styles.decorative_card}
+              ></div>
+            );
+          })}
+        </div>
+      )}
       {query && isError ? (
         <div className={styles.message_wrapper}>
           <ExpectedError

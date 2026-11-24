@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { randomString } from "@/app/lib/randomString";
-import { cookies } from "next/headers";
 import {
   saveAmbianceSchema,
   transformVideoDataForStorage,
@@ -15,11 +13,7 @@ import { getUserId } from "@/app/lib/auth/getCurrentUser";
 // Saves the ambiance as a draft
 export async function POST(req: NextRequest) {
   try {
-    const isDev = process.env.NODE_ENV === "development";
-    const cookieStore = cookies();
-
-    // In dev, use admin client to bypass RLS; in prod, use regular client
-    const supabase = isDev ? createAdminClient() : createClient(cookieStore);
+    const supabase = createAdminClient();
 
     // Get authenticated user
     const userId = await getUserId();

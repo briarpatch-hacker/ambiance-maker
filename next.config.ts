@@ -1,8 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  typescript: {
+    tsconfigPath:
+      process.env.NODE_ENV === "production"
+        ? "tsconfig.build.json"
+        : "tsconfig.json",
+  },
   images: {
-    domains: ["lh3.googleusercontent.com"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
+    ],
   },
   async headers() {
     return [

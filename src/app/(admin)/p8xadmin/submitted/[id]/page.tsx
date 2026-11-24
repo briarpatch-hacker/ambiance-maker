@@ -1,8 +1,7 @@
 import styles from "./page.module.css";
 import Review from "@/app/components/Admin/Review Ambiance/review";
-import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
-import { cookies } from "next/headers";
+import { verifyAdmin } from "@/app/lib/auth/adminAuth";
 import { AmbianceData } from "@/app/components/Ambiance Maker/ambianceMaker";
 import NotFound from "@/app/components/Errors/Not Found/notFound";
 
@@ -16,8 +15,11 @@ interface SubmissionData {
 }
 
 async function getSubmission(ambianceId: string): Promise<SubmissionData | null> {
-  const isDev = process.env.NODE_ENV === "development";
-  const supabase = isDev ? createAdminClient() : createClient(cookies());
+  // Layouts don't re-run on client navigation, so check admin here too
+  const auth = await verifyAdmin();
+  if ("error" in auth) return null;
+
+  const supabase = createAdminClient();
 
   const { data: ambiance, error } = await supabase
     .from("ambiances")
