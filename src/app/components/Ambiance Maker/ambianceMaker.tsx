@@ -502,7 +502,8 @@ export default function AmbianceMaker({
               <div className={styles.metadata}>
                 {ambianceData.views !== undefined && (
                   <span className={styles.views}>
-                    {ambianceData.views.toLocaleString()} views
+                    {ambianceData.views.toLocaleString()} view
+                    {ambianceData.views > 1 && `s`}
                   </span>
                 )}
                 {hasDisplayRating ? (

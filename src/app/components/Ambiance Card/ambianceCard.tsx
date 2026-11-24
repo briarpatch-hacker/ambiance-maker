@@ -70,6 +70,9 @@ function formatRelativeTime(date: Date): string {
 // Takes the number of views and abbreviates it
 function formatViews(views: number): string {
   if (views < 2) {
+    if (views === 1) {
+      return `1 view`;
+    }
     return `No views`;
   }
   if (views < 1000) {

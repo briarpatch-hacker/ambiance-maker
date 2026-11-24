@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/app/lib/supabase/admin";
-import { createClient } from "@/app/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import DraftsContent from "./client";
@@ -14,8 +13,7 @@ export const metadata: Metadata = {
 async function getDrafts() {
   const cookieStore = await cookies();
   const sessionId = cookieStore.get("sessionId")?.value;
-  const isDev = process.env.NODE_ENV === "development";
-  const supabase = isDev ? createAdminClient() : createClient(cookies());
+  const supabase = createAdminClient();
   const { data: session, error } = await supabase
     .from("sessions")
     .select("user_id")

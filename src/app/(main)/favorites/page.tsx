@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/app/lib/supabase/admin";
-import { createClient } from "@/app/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import FavoritesContent from "./client";
@@ -16,8 +15,7 @@ async function getFavorites() {
   const sessionId = cookieStore.get("sessionId")?.value;
   if (!sessionId) redirect("/login");
 
-  const isDev = process.env.NODE_ENV === "development";
-  const supabase = isDev ? createAdminClient() : createClient(cookies());
+  const supabase = createAdminClient();
 
   const { data: session, error: sessionError } = await supabase
     .from("sessions")

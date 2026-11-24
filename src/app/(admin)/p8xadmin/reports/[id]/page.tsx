@@ -1,8 +1,7 @@
 import styles from "./page.module.css";
 import ReviewReport from "@/app/components/Admin/Review Report/reviewReport";
-import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
-import { cookies } from "next/headers";
+import { verifyAdmin } from "@/app/lib/auth/adminAuth";
 import { AmbianceData } from "@/app/components/Ambiance Maker/ambianceMaker";
 import NotFound from "@/app/components/Errors/Not Found/notFound";
 
@@ -22,8 +21,11 @@ interface ReportPageData {
 }
 
 async function getReport(reportId: string): Promise<ReportPageData | null> {
-  const isDev = process.env.NODE_ENV === "development";
-  const supabase = isDev ? createAdminClient() : createClient(cookies());
+  // Layouts don't re-run on client navigation, so check admin here too
+  const auth = await verifyAdmin();
+  if ("error" in auth) return null;
+
+  const supabase = createAdminClient();
 
   const { data: report, error } = await supabase
     .from("ambiance_reports")

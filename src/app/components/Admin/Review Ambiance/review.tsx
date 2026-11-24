@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import styles from "./review.module.css";
 import AmbianceMaker from "@/app/components/Ambiance Maker/ambianceMaker";
 import ConfirmationBox from "@/app/components/Confirmation Box/confirmationBox";
@@ -67,7 +67,12 @@ export default function Review({
       }
     }
     // If there are deeper children, add an empty placeholder
-    if (value && node && typeof node === "object" && Object.keys(node).length > 0) {
+    if (
+      value &&
+      node &&
+      typeof node === "object" &&
+      Object.keys(node).length > 0
+    ) {
       newArr.push("");
     }
     setSelectedCategories(newArr);
@@ -88,7 +93,10 @@ export default function Review({
       const res = await fetch("/api/admin/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: ambianceData?.id, category_id: resolvedCategoryId }),
+        body: JSON.stringify({
+          id: ambianceData?.id,
+          category_id: resolvedCategoryId,
+        }),
       });
       if (!res.ok) throw new Error();
       setShowSuccess(true);
@@ -125,7 +133,7 @@ export default function Review({
     }
   }
 
-  const confirmationBoxes = useRef({
+  const confirmationBoxes = {
     [`approve`]: {
       message: "Approve this ambiance?",
       confirmText: "Approve",
@@ -141,7 +149,7 @@ export default function Review({
       confirmText: "Shadowban",
       onConfirm: shadowban,
     },
-  });
+  };
 
   const [boxData, setBoxData] = useState({
     message: "",
@@ -151,9 +159,9 @@ export default function Review({
 
   function openConfirmationBox(mode: "approve" | "reject" | "shadowban") {
     setBoxData({
-      message: confirmationBoxes.current[mode].message,
-      confirmText: confirmationBoxes.current[mode].confirmText,
-      onConfirm: confirmationBoxes.current[mode].onConfirm,
+      message: confirmationBoxes[mode].message,
+      confirmText: confirmationBoxes[mode].confirmText,
+      onConfirm: confirmationBoxes[mode].onConfirm,
     });
     setShowModal(true);
   }

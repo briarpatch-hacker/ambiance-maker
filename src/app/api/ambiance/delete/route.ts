@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
-import { cookies } from "next/headers";
 import { getUserId } from "@/app/lib/auth/getCurrentUser";
 
 export async function DELETE(req: NextRequest) {
@@ -36,11 +34,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const isDev = process.env.NODE_ENV === "development";
-    const cookieStore = cookies();
-
-    // In dev, use admin client to bypass RLS; in prod, use regular client
-    const supabase = isDev ? createAdminClient() : createClient(cookieStore);
+    const supabase = createAdminClient();
 
     const { error } = await supabase
       .from("ambiances")
