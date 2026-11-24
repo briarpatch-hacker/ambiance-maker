@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { AmbianceData } from "@/app/components/Ambiance Maker/ambianceMaker";
-import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { resolveViewerKey } from "@/app/lib/analytics/viewerKey";
 import { cookies, headers } from "next/headers";
@@ -22,8 +21,7 @@ const getAmbiance = cache(
       }
     | undefined
   > => {
-    const isDev = process.env.NODE_ENV === "development";
-    const supabase = isDev ? createAdminClient() : createClient(cookies());
+    const supabase = createAdminClient();
 
     // Gets the ambiance data
     const { data: ambiance, error } = await supabase

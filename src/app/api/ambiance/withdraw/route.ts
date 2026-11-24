@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
-import { cookies } from "next/headers";
 import { getUserId } from "@/app/lib/auth/getCurrentUser";
 
 // Withdraws a submitted ambiance back to draft status
 export async function POST(req: NextRequest) {
   try {
-    const isDev = process.env.NODE_ENV === "development";
-    const cookieStore = cookies();
-    const supabase = isDev ? createAdminClient() : createClient(cookieStore);
+    const supabase = createAdminClient();
 
     const userId = await getUserId();
     if (!userId) {

@@ -4,7 +4,6 @@ import Dashboard from "@/app/components/Dashboard/dashboard";
 import PageView from "@/app/components/Page View/pageView";
 import styles from "./page.module.css";
 import { createAdminClient } from "@/app/lib/supabase/admin";
-import { createClient } from "@/app/lib/supabase/server";
 import { cookies } from "next/headers";
 
 const DASHBOARD_LIMIT = 12;
@@ -27,9 +26,7 @@ export default async function Page() {
     );
   }
 
-  const isDev = process.env.NODE_ENV === "development";
-  const supabase = isDev ? createAdminClient() : createClient(cookies());
-  const adminSupabase = createAdminClient();
+  const supabase = createAdminClient();
 
   const { data: session } = await supabase
     .from("sessions")
@@ -62,7 +59,7 @@ export default async function Page() {
       .in("status", ["draft", "submitted"])
       .order("updated_at", { ascending: false })
       .limit(DASHBOARD_LIMIT),
-    adminSupabase
+    supabase
       .from("ambiances")
       .select("id, title, thumbnail, views, published_at, rating_score, rating_count, users!user_id(username)")
       .eq("status", "published")

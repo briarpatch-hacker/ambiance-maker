@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     // public.users with account_status = 'good'
     const { count: totalCount, error: countError } = await supabase
       .from("ambiances")
-      .select("id, users!inner(account_status)", {
+      .select("id, users!user_id!inner(account_status)", {
         count: "exact",
         head: true,
       })
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
         rating_sum,
         rating_count,
         created_at,
-        users!inner ( username, account_status )
+        users!user_id!inner ( username, account_status )
       `,
       )
       .eq("status", "submitted")

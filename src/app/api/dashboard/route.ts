@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/app/lib/supabase/server";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { cookies } from "next/headers";
 
@@ -10,8 +9,7 @@ export async function GET(_req: NextRequest) {
   try {
     const cookieStore = await cookies();
     const sessionId = cookieStore.get("sessionId")?.value;
-    const isDev = process.env.NODE_ENV === "development";
-    const supabase = isDev ? createAdminClient() : createClient(cookies());
+    const supabase = createAdminClient();
 
     // --- User's recent drafts (requires auth) ---
     let drafts: {
@@ -42,8 +40,7 @@ export async function GET(_req: NextRequest) {
     }
 
     // --- Recent public ambiances (no auth needed) ---
-    const adminSupabase = createAdminClient();
-    const { data: recentData } = await adminSupabase
+    const { data: recentData } = await supabase
       .from("ambiances")
       .select("id, title, thumbnail, views, published_at, rating_score, rating_count, users!user_id(username)")
       .eq("status", "published")

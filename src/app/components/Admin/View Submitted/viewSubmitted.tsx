@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import styles from "./viewSubmitted.module.css";
+import paginationStyles from "@/app/components/Pagination/pagination.module.css";
 import classNames from "classnames";
 import { JSX } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
@@ -170,7 +171,7 @@ export default function ViewSubmitted({
         <Link
           href={`${queryString}`}
           key={key}
-          className={styles[className || ``]}
+          className={className}
           aria-label={ariaLabel ? ariaLabel : `Go to page ${page}`}
         >
           {text}
@@ -190,7 +191,13 @@ export default function ViewSubmitted({
     }
     if (page > 1) {
       menuArr.push(
-        menuLink("<", page - 1, "left-arrow", "arrow", "Previous page"),
+        menuLink(
+          "<",
+          page - 1,
+          "left-arrow",
+          paginationStyles.arrow,
+          "Previous page",
+        ),
       );
     }
     if (page > 1 + range && numPages > 2 * range + 1) {
@@ -198,7 +205,7 @@ export default function ViewSubmitted({
       if (startPage > 2) {
         menuArr.push(
           <div
-            className={styles.ellipsis}
+            className={paginationStyles.ellipsis}
             key="left-ellipsis"
             aria-hidden={true}
           >
@@ -211,7 +218,7 @@ export default function ViewSubmitted({
       i === page
         ? menuArr.push(
             <div
-              className={styles.current_page}
+              className={paginationStyles.current_page}
               key={`page-${page}`}
               aria-current="page"
             >
@@ -224,7 +231,7 @@ export default function ViewSubmitted({
       if (endPage < numPages - 1) {
         menuArr.push(
           <div
-            className={styles.ellipsis}
+            className={paginationStyles.ellipsis}
             key="right-ellipsis"
             aria-hidden={true}
           >
@@ -236,11 +243,17 @@ export default function ViewSubmitted({
     }
     if (page < numPages) {
       menuArr.push(
-        menuLink(">", page + 1, "right-arrow", "arrow", "Next Page"),
+        menuLink(
+          ">",
+          page + 1,
+          "right-arrow",
+          paginationStyles.arrow,
+          "Next Page",
+        ),
       );
     }
     return (
-      <nav className={styles.pagination_menu} aria-label="Pagination">
+      <nav className={paginationStyles.pagination_menu} aria-label="Pagination">
         {menuArr}
       </nav>
     );
