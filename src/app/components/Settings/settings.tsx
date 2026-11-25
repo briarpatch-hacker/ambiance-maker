@@ -72,6 +72,7 @@ export default function Settings({ user: initialUser }: SettingsProps) {
       }
       setUser((prev) => ({ ...prev, username: data.username }));
       setUsernameSuccess("Username updated successfully.");
+      router.refresh();
     } catch {
       setUsernameError("An unexpected error occurred.");
     } finally {
@@ -92,7 +93,7 @@ export default function Settings({ user: initialUser }: SettingsProps) {
         setDeleting(false);
         return;
       }
-      router.push("/");
+      window.location.assign("/");
     } catch {
       setDeleteError("An unexpected error occurred.");
       setShowDeleteConfirm(false);

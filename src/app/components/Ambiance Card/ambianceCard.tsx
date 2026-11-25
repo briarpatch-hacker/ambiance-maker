@@ -73,7 +73,7 @@ function formatViews(views: number): string {
     if (views === 1) {
       return `1 view`;
     }
-    return `No views`;
+    return `0 views`;
   }
   if (views < 1000) {
     return `${views} views`;

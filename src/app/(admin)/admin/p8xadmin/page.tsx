@@ -2,9 +2,9 @@ import Link from "next/link";
 import styles from "./page.module.css";
 
 const adminPages = [
-  { href: "/p8xadmin/submitted", label: "Submitted Ambiances" },
-  { href: "/p8xadmin/reports", label: "Reports" },
-  { href: "/p8xadmin/share-hits", label: "Share Hits" },
+  { href: "/admin/p8xadmin/submitted", label: "Submitted Ambiances" },
+  { href: "/admin/p8xadmin/reports", label: "Reports" },
+  { href: "/admin/p8xadmin/share-hits", label: "Share Hits" },
 ];
 
 export default function Page() {

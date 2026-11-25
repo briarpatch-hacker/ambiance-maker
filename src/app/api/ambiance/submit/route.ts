@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     const parseResult = submitAmbianceSchema.safeParse(transformedBody);
 
     if (!parseResult.success) {
-      console.error("Validation errors:", parseResult.error.issues);
+      // console.error("Validation errors:", parseResult.error.issues);
       return NextResponse.json(
         { error: "Invalid submission data." },
         { status: 400 },

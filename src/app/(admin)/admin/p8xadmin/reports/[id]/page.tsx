@@ -4,6 +4,7 @@ import { createAdminClient } from "@/app/lib/supabase/admin";
 import { verifyAdmin } from "@/app/lib/auth/adminAuth";
 import { AmbianceData } from "@/app/components/Ambiance Maker/ambianceMaker";
 import NotFound from "@/app/components/Errors/Not Found/notFound";
+import { categoryById } from "@/app/lib/categories";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -42,6 +43,11 @@ async function getReport(reportId: string): Promise<ReportPageData | null> {
         title,
         description,
         video_data,
+        category_id,
+        published_at,
+        views,
+        rating_score,
+        rating_count,
         user_id,
         users:user_id ( username )
       )
@@ -74,6 +80,11 @@ async function getReport(reportId: string): Promise<ReportPageData | null> {
       title: ambiance.title,
       description: ambiance.description,
       author: ambianceAuthor?.username ?? "Unknown",
+      category: categoryById[ambiance.category_id] ?? undefined,
+      datePublished: ambiance.published_at,
+      views: ambiance.views,
+      ratingTotal: ambiance.rating_score ?? undefined,
+      ratingCount: ambiance.rating_count,
       videoData,
     },
     reportData: {
@@ -102,7 +113,7 @@ export default async function Page({ params }: PageProps) {
           <NotFound
             errorMessage="Report not found"
             buttonText="Go Back"
-            href="/p8xadmin/reports"
+            href="/admin/p8xadmin/reports"
           />
         )}
       </div>

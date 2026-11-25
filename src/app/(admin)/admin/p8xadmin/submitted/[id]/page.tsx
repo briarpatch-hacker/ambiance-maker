@@ -76,7 +76,7 @@ export default async function Page({ params }: PageProps) {
           <NotFound
             errorMessage="Submission not found"
             buttonText="Go Back"
-            href="/p8xadmin/submitted"
+            href="/admin/p8xadmin/submitted"
           />
         )}
       </div>
